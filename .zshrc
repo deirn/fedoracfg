@@ -88,10 +88,17 @@ vterm_printf() {
 # [ vterm ]
 
 
+# [ asdf ]
+source "$HOME/.asdf/plugins/java/set-java-home.zsh"
+# [ asdf ]
+
+
 # [ path variables ]
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.config/emacs/bin:$PATH"
 export PATH="$HOME/.local/share/JetBrains/Toolbox/bin:$PATH"
+export PATH="$HOME/.local/share/JetBrains/Toolbox/scripts:$PATH"
+export PATH="$HOME/.asdf/shims:$PATH"
 # [ path variables ]
 
 

@@ -8,7 +8,8 @@ set visualbell
 set hlsearch
 "set quickscope
 
-set shell=bash.exe
-set shellcmdflag=-lic
+set clipboard+=unnamed
+"set shell=bash.exe
+"set shellcmdflag=-lic
 
 iunmap jk

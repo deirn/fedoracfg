@@ -112,9 +112,10 @@
 ;; TODO: TailwindCSS
 ;; (use-package! lsp-tailwindcss
 ;;   :after lsp-mode
-;;   :init (setq lsp-tailwindcss-add-on-mode t))
-;; (after! lsp-tailwindcss
-;;   (setq lsp-tailwindcss-skip-config-check t))
+;;   :init
+;;   (setq lsp-tailwindcss-add-on-mode t
+;;         lsp-tailwindcss-server-version "0.14.8"
+;;         lsp-tailwindcss-skip-config-check t))
 
 ;; Discord rich presense
 (use-package! elcord
