@@ -117,6 +117,7 @@
 ;;         lsp-tailwindcss-server-version "0.14.8"
 ;;         lsp-tailwindcss-skip-config-check t))
 
+
 ;; Discord rich presense
 (use-package! elcord
   :config
@@ -125,8 +126,10 @@
   (setq elcord-use-major-mode-as-main-icon t)
   (elcord-mode))
 
+
 (after! vterm
   (setq vterm-shell "/usr/bin/env zsh"))
+
 
 (after! lsp-java
   ;; Configure Java configuration runtimes, generated in ../packages.nix
@@ -139,9 +142,17 @@
   ;; Give jdtls 2GB max
   (setq lsp-java-vmargs '("-XX:+UseParallelGC" "-XX:GCTimeRatio=4" "-XX:AdaptiveSizePolicyWeight=90" "-Dsun.zip.disableMemoryMapping=true" "-Xmx2G" "-Xms100m")))
 
+
+;; https://emacs-lsp.github.io/lsp-dart
+(after! lsp-dart
+  ;; Disable widget guides as it has performance issue
+  (setq lsp-dart-flutter-widget-guides nil))
+
+
 (after! treemacs
   ;; Collapse empty directories
   (setq treemacs-collapse-dirs 10))
+
 
 (after! lsp-mode
   ;; https://github.com/emacs-lsp/lsp-mode/blob/master/docs/tutorials/how-to-turn-off.md
@@ -154,6 +165,7 @@
                  "[/\\\\]\\.direnv"))
     (push dir lsp-file-watch-ignored-directories)))
 
+
 ;; HACK: Translate C-i to H-i so it can be used in daemon mode
 (defun my/C-i ()
   (when (display-graphic-p)
@@ -165,6 +177,7 @@
 
 (after! better-jumper
   (keymap-global-set "H-i" #'better-jumper-jump-forward))
+
 
 ;; HACK: On daemon mode, ask confirmation before closing Emacsclient
 (defun my/confirm-exit ()

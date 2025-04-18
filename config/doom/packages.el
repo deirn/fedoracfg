@@ -48,9 +48,6 @@
 ;; ...Or *all* packages (NOT RECOMMENDED; will likely break things)
 ;; (unpin! tu)
 
-;; TODO: https://github.com/doomemacs/doomemacs/issues/8287
-(package! track-changes :built-in t)
-
 (package! elcord)
 (package! trashed)
 (package! svelte-mode)

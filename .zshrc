@@ -90,7 +90,27 @@ vterm_printf() {
 
 # [ asdf ]
 source "$HOME/.asdf/plugins/java/set-java-home.zsh"
+export PATH="$HOME/.asdf/shims:$PATH"
 # [ asdf ]
+
+
+# [ npm ]
+# https://github.com/sindresorhus/guides/blob/main/npm-global-without-sudo.md
+NPM_PACKAGES="${HOME}/.local/share/npm_packages"
+export PATH="$PATH:$NPM_PACKAGES/bin"
+export MANPATH="${MANPATH-$(manpath)}:$NPM_PACKAGES/share/man"
+# [ npm ]
+
+
+# [ pnpm ]
+export PNPM_HOME="$HOME/.local/share/pnpm"
+export PATH="$PNPM_HOME:$PATH"
+# [ pnpm ]
+
+
+# [ flutter ]
+export FLUTTER_ROOT="$(asdf where flutter)"
+# [ flutter ]
 
 
 # [ path variables ]
@@ -98,7 +118,6 @@ export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.config/emacs/bin:$PATH"
 export PATH="$HOME/.local/share/JetBrains/Toolbox/bin:$PATH"
 export PATH="$HOME/.local/share/JetBrains/Toolbox/scripts:$PATH"
-export PATH="$HOME/.asdf/shims:$PATH"
 # [ path variables ]
 
 
@@ -106,3 +125,4 @@ export PATH="$HOME/.asdf/shims:$PATH"
 alias ls="lsd"
 alias ll="ls -lA"
 # [ custom aliases ]
+
