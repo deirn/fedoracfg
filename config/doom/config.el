@@ -128,7 +128,7 @@
 
 
 (after! vterm
-  (setq vterm-shell "/usr/bin/env zsh"))
+  (setq vterm-shell "/usr/bin/env fish"))
 
 
 (after! lsp-java
@@ -163,7 +163,14 @@
   ;; Add directories to ignore from LSP watch
   (dolist (dir '("[/\\\\]\\.devenv"
                  "[/\\\\]\\.direnv"))
-    (push dir lsp-file-watch-ignored-directories)))
+    (push dir lsp-file-watch-ignored-directories))
+  ;; LSP for Fish shell
+  (lsp-register-client
+    (make-lsp-client
+     :new-connection (lsp-stdio-connection '("fish-lsp" "start"))
+     :activation-fn (lsp-activate-on "fish")
+     :server-id 'fish-lsp))
+  (add-hook 'fish-mode-hook #'lsp))
 
 
 ;; HACK: Translate C-i to H-i so it can be used in daemon mode
