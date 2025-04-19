@@ -1,4 +1,4 @@
-set -U fish_greeting
+set fish_greeting
 set -gx FEDORACFG $HOME/Documents/github.com/deirn/fedoracfg
 
 
@@ -75,7 +75,8 @@ set -gx FLUTTER_ROOT (asdf where flutter)
 # [ flutter ]
 
 
-# [ custom aliases ]
-alias ls="lsd"
-alias ll="ls -lA"
-# [ custom aliases ]
+# [ abbreviations ]
+abbr -a ls lsd
+abbr -a ll lsd -lA
+abbr -a fetch fastfetch
+# [ abbreviations ]

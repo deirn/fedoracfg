@@ -74,9 +74,8 @@
 ;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
 ;; they are implemented.
 
-(setq doom-font (font-spec :family "JetBrainsMono NF" :size 14))
-;; Fallback, for usage in LSP modeline
-(add-to-list 'doom-symbol-fallback-font-families "Noto Emoji")
+(setq doom-font (font-spec :family "JetBrainsMono NF" :size 14)
+      doom-variable-pitch-font (font-spec :family "Adwaita Sans" :size 14))
 
 ;; Make emacs fullscreen on start
 ;; (add-to-list 'default-frame-alist '(fullscreen . maximized))
@@ -110,12 +109,12 @@
 ;;   (add-hook 'svelte-mode-hook #'lsp! 'append))
 
 ;; TODO: TailwindCSS
-;; (use-package! lsp-tailwindcss
-;;   :after lsp-mode
-;;   :init
-;;   (setq lsp-tailwindcss-add-on-mode t
-;;         lsp-tailwindcss-server-version "0.14.8"
-;;         lsp-tailwindcss-skip-config-check t))
+(use-package! lsp-tailwindcss
+  :after lsp-mode
+  :init
+  (setq lsp-tailwindcss-add-on-mode t
+        lsp-tailwindcss-server-version "0.14.8"))
+;; lsp-tailwindcss-skip-config-check t))
 
 
 ;; Discord rich presense
@@ -127,8 +126,16 @@
   (elcord-mode))
 
 
+;; Use Bash for internal Emacs functionality
+(setq shell-file-name (executable-find "bash"))
+
+
 (after! vterm
-  (setq vterm-shell "/usr/bin/env fish"))
+  ;; Use Fish on vterm
+  (setq vterm-shell "/usr/bin/env fish")
+  ;; Show modeline on `+vterm/here' buffers
+  (remove-hook 'vterm-mode-hook 'hide-mode-line-mode)
+  (map! :map vterm-mode-map "C-c ESC" #'vterm-send-escape))
 
 
 (after! lsp-java
@@ -155,9 +162,12 @@
 
 
 (after! lsp-mode
-  ;; https://github.com/emacs-lsp/lsp-mode/blob/master/docs/tutorials/how-to-turn-off.md
+  ;; https://emacs-lsp.github.io/lsp-mode/tutorials/how-to-turn-off/
   (setq lsp-signature-auto-activate nil
         lsp-signature-render-documentation nil
+        lsp-headerline-breadcrumb-enable t
+        lsp-headerline-breadcrumb-icons-enable nil
+        lsp-eldoc-enable-hover nil
         ;; Always ask before executing actions even for single action
         lsp-auto-execute-action nil)
   ;; Add directories to ignore from LSP watch
@@ -166,10 +176,10 @@
     (push dir lsp-file-watch-ignored-directories))
   ;; LSP for Fish shell
   (lsp-register-client
-    (make-lsp-client
-     :new-connection (lsp-stdio-connection '("fish-lsp" "start"))
-     :activation-fn (lsp-activate-on "fish")
-     :server-id 'fish-lsp))
+   (make-lsp-client
+    :new-connection (lsp-stdio-connection '("fish-lsp" "start"))
+    :activation-fn (lsp-activate-on "fish")
+    :server-id 'fish-lsp))
   (add-hook 'fish-mode-hook #'lsp))
 
 
