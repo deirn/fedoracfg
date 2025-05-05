@@ -22,6 +22,7 @@ fish_add_path $HOME/.local/bin
 fish_add_path $HOME/.config/emacs/bin
 fish_add_path $HOME/.local/share/JetBrains/Toolbox/bin
 fish_add_path $HOME/.local/share/JetBrains/Toolbox/scripts
+fish_add_path $FEDORACFG/bin
 # [ path variables ]
 
 
