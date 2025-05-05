@@ -8,16 +8,30 @@ RUN apt-get update
 
 # Install systemd
 RUN apt-get install systemd -y
+
+# Locale fixes
 RUN apt-get install -y locales && \
     locale-gen en_US.UTF-8
 RUN echo "LANG=en_US.UTF-8" > /etc/locale.conf
 
 # Install sudo and create user
 RUN apt-get install -y sudo \
-    && useradd -ms /bin/bash sisyphus \
-    && echo "sisyphus:password" | chpasswd \
-    && usermod -aG sudo sisyphus \
-    && echo "sisyphus ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+    && useradd -ms /bin/bash a \
+    && echo "a:qwe123" | chpasswd \
+    && usermod -aG sudo a \
+    && echo "a ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Install ssh
+RUN apt-get install -y openssh-server && \
+    systemctl enable ssh && \
+    mkdir /var/run/sshd
+
+# Allow SSH login for the non-root user
+RUN mkdir -p /home/a/.ssh && \
+    chown a:a /home/a/.ssh && \
+    chmod 700 /home/a/.ssh && \
+    sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
 
 # Install Nix
 RUN apt-get install curl -y
@@ -43,5 +57,11 @@ RUN (type -p wget >/dev/null || (apt update && apt-get install wget -y)) \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
     && apt update \
     && apt install gh -y
+
+# Install cloudflared
+RUN mkdir -p --mode=0755 /usr/share/keyrings \
+    && curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null \
+    && echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' | sudo tee /etc/apt/sources.list.d/cloudflared.list \
+    && sudo apt-get update && sudo apt-get install cloudflared
 
 CMD [ "/bin/systemd" ]

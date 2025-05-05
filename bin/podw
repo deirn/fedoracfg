@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-podman start -a $1
-podman stop $1
