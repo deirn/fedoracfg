@@ -79,4 +79,8 @@ set -gx FLUTTER_ROOT (asdf where flutter)
 abbr -a ls lsd
 abbr -a ll lsd -lA
 abbr -a fetch fastfetch
+abbr -a enw emacs -nw
+
+alias protontricks="flatpak run com.github.Matoking.protontricks"
+alias protontricks-launch="latpak run --command=protontricks-launch com.github.Matoking.protontricks"
 # [ abbreviations ]

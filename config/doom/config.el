@@ -74,8 +74,16 @@
 ;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
 ;; they are implemented.
 
-(setq doom-font (font-spec :family "JetBrainsMono NF" :size 14)
-      doom-variable-pitch-font (font-spec :family "Adwaita Sans" :size 14))
+
+(setq doom-font (font-spec :family "JetBrainsMono Nerd Font" :size 14)
+      ;; doom-variable-pitch-font (font-spec :family "Adwaita Sans" :size 14)
+      doom-symbol-font (font-spec :family "JetBrainsMono Nerd Font" :size 14))
+
+
+(use-package! nerd-icons
+  :custom
+  (nerd-icons-font-family "JetBrainsMono Nerd Font"))
+
 
 ;; Make emacs fullscreen on start
 ;; (add-to-list 'default-frame-alist '(fullscreen . maximized))
@@ -93,10 +101,12 @@
 ;; (setq browse-url-browser-function 'browse-url-generic
 ;;       browse-url-generic-program "sensible-browser")
 
+
 ;; File assoctiations
 (defun my/assoc-ext (ext mode)
   (add-to-list 'auto-mode-alist `(,(concat "\\." ext "\\'") . ,mode)))
 (my/assoc-ext "bean" 'beancount-mode)
+
 
 ;; Prisma
 (my/assoc-ext "prisma" 'prisma-mode)
@@ -107,6 +117,7 @@
 ;; (add-to-list 'auto-mode-alist '("\\.svelte\\'" . svelte-mode))
 ;; (after! svelte-mode
 ;;   (add-hook 'svelte-mode-hook #'lsp! 'append))
+
 
 ;; TODO: TailwindCSS
 (use-package! lsp-tailwindcss
@@ -156,9 +167,18 @@
   (setq lsp-dart-flutter-widget-guides nil))
 
 
-(after! treemacs
-  ;; Collapse empty directories
-  (setq treemacs-collapse-dirs 10))
+(after! dirvish
+  (setq dirvish-attributes '(vc-state subtree-state nerd-icons collapse file-size)
+        dirvish-side-attributes '(vc-state subtree-state nerd-icons collapse filestate)))
+
+
+;; https://github.com/Alexander-Miller/treemacs?tab=readme-ov-file#configuration
+;; (after! treemacs
+;;   (setq treemacs-collapse-dirs 10
+;;         treemacs-indentation 1
+;;         treemacs-no-png-images t))
+;; (custom-set-faces!
+;;   '(treemacs-root-face :height 1.0))
 
 
 (after! lsp-mode

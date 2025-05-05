@@ -1,3 +1,5 @@
+" -*- mode: vimrc -*-
+
 source ~/Documents/github.com/deirn/fedoracfg/share/idea-doom-emacs/init.vim
 
 Plug 'tpope/vim-surround'
