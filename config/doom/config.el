@@ -101,6 +101,8 @@
 ;; (setq browse-url-browser-function 'browse-url-generic
 ;;       browse-url-generic-program "sensible-browser")
 
+;; Enable mise integration globally
+(add-hook 'after-init-hook #'global-mise-mode)
 
 ;; File assoctiations
 (defun my/assoc-ext (ext mode)

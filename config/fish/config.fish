@@ -1,4 +1,3 @@
-set fish_greeting
 set -gx FEDORACFG $HOME/Documents/github.com/deirn/fedoracfg
 
 
@@ -46,16 +45,9 @@ fzf --fish | source
 # [ fzf ]
 
 
-# [ asdf ]
-set _asdf_shims "$HOME/.asdf/shims"
-
-# Do not use fish_add_path (added in Fish 3.2) because it
-# potentially changes the order of items in PATH
-if not contains $_asdf_shims $PATH
-    set -gx --prepend PATH $_asdf_shims
-end
-set --erase _asdf_shims
-# [ asdf ]
+# [ mise ]
+mise activate fish | source
+# [ mise ]
 
 
 # [ npm ]
@@ -69,11 +61,6 @@ fish_add_path $NPM_PACKAGES/bin
 set -gx PNPM_HOME $HOME/.local/share/pnpm
 fish_add_path $PNPM_HOME
 # [ pnpm ]
-
-
-# [ flutter ]
-set -gx FLUTTER_ROOT (asdf where flutter)
-# [ flutter ]
 
 
 # [ abbreviations ]

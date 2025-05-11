@@ -54,6 +54,8 @@
 (package! vimrc-mode)
 (package! lsp-tailwindcss :recipe (:host github :repo "merrickluo/lsp-tailwindcss"))
 (package! prisma-mode :recipe (:host github :repo "pimeys/emacs-prisma-mode" :branch "main"))
+(package! string-edit :recipe (:host github :repo "magnars/string-edit.el"))
+(package! mise)
 
 ;; (package! discord-rp
 ;;   :recipe (:host nil
