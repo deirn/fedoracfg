@@ -41,7 +41,8 @@ end
 
 
 # [ fzf ]
-fzf --fish | source
+set -gx FZF_DEFAULT_COMMAND "fd --type f"
+set -gx FZF_DEFAULT_OPTS "--color 16 --cycle --layout=reverse --border --height=90% --preview-window=wrap --marker='*'"
 # [ fzf ]
 
 
