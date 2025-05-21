@@ -85,5 +85,7 @@ abbr -a rm trash
 abbr -a rm! /usr/bin/rm
 
 alias protontricks="flatpak run com.github.Matoking.protontricks"
-alias protontricks-launch="latpak run --command=protontricks-launch com.github.Matoking.protontricks"
+alias protontricks-launch="flatpak run --command=protontricks-launch com.github.Matoking.protontricks"
+
+alias zen-browser="flatpak run app.zen_browser.zen"
 # [ abbreviations ]
