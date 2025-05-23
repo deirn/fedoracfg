@@ -163,10 +163,34 @@
   (setq lsp-java-vmargs '("-XX:+UseParallelGC" "-XX:GCTimeRatio=4" "-XX:AdaptiveSizePolicyWeight=90" "-Dsun.zip.disableMemoryMapping=true" "-Xmx2G" "-Xms100m")))
 
 
+;; Dart/Flutter
 ;; https://emacs-lsp.github.io/lsp-dart
 (after! lsp-dart
   ;; Disable widget guides as it has performance issue
   (setq lsp-dart-flutter-widget-guides nil))
+
+;; Enable hot restart on flutter dape
+;; https://github.com/svaante/dape/issues/201#issuecomment-2652795449
+(defun dape-flutter-hot-restart ()
+  (interactive)
+  (dape-request (dape--live-connection 'last) "hotRestart" nil))
+
+(defun dape-flutter-hot-reload ()
+  (interactive)
+  (dape-request (dape--live-connection 'last) "hotReload" nil))
+
+(defun dape-flutter-open-devtools ()
+  (interactive)
+  (with-current-buffer "*dape-connection events*"
+    (save-match-data
+      (point-min)
+      (let* ((devtools-addr
+              (progn (string-match "activeDevtoolsServerAddress.*\".*\"\\(https?://.*?\\)\"" (buffer-string))
+                     (match-string 1 (buffer-string))))
+             (vm-service-uri
+              (progn (string-match "connectedVmServiceUri.*\\(https?://.*?\\)\"" (buffer-string))
+                     (match-string 1 (buffer-string)))))
+        (browse-url-chrome (format "%s?uri=%s" devtools-addr vm-service-uri))))))
 
 
 (after! dirvish
