@@ -163,6 +163,11 @@
   (setq lsp-java-vmargs '("-XX:+UseParallelGC" "-XX:GCTimeRatio=4" "-XX:AdaptiveSizePolicyWeight=90" "-Dsun.zip.disableMemoryMapping=true" "-Xmx2G" "-Xms100m")))
 
 
+(after! dape
+  ;; Enable debug mode, needed for Flutter devtools
+  (setq dape-debug t))
+
+
 ;; Dart/Flutter
 ;; https://emacs-lsp.github.io/lsp-dart
 (after! lsp-dart
