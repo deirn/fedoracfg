@@ -76,6 +76,11 @@ set -gx PNPM_HOME $HOME/.local/share/pnpm
 fish_add_path $PNPM_HOME
 # [ pnpm ]
 
+# [ protonge ]
+# https://github.com/augustobmoura/asdf-protonge
+set -gx ASDF_PROTONGE_STEAM_COMPAT_DIR "$HOME/.var/app/com.valvesoftware.Steam/data/Steam/compatibilitytools.d/"
+# [ protonge ]
+
 # [ abbreviations ]
 abbr -a ls lsd
 abbr -a ll lsd -lA
