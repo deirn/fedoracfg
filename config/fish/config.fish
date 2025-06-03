@@ -94,3 +94,7 @@ alias protontricks-launch="flatpak run --command=protontricks-launch com.github.
 
 alias zen-browser="flatpak run app.zen_browser.zen"
 # [ abbreviations ]
+
+# [ zoxide ]
+zoxide init fish | source
+# [ zoxide ]
