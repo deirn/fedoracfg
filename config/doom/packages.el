@@ -56,6 +56,7 @@
 (package! prisma-mode :recipe (:host github :repo "pimeys/emacs-prisma-mode" :branch "main"))
 (package! string-edit :recipe (:host github :repo "magnars/string-edit.el"))
 (package! mise)
+(package! systemd-mode :recipe (:files ("*.el" "*directives.txt")))
 
 ;; (package! discord-rp
 ;;   :recipe (:host nil

@@ -108,6 +108,7 @@
 (defun my/assoc-ext (ext mode)
   (add-to-list 'auto-mode-alist `(,(concat "\\." ext "\\'") . ,mode)))
 (my/assoc-ext "bean" 'beancount-mode)
+(my/assoc-ext "service" 'systemd-mode)
 
 
 ;; Prisma
