@@ -16,6 +16,7 @@ Wants=network-online.target
 
 [Service]
 Type=notify
+Restart=on-failure
 ExecStartPre=-/usr/bin/mkdir -p %h/mnt/%i
 ExecStart= \
   /usr/bin/rclone mount \

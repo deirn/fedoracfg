@@ -65,6 +65,11 @@ set -gx FZF_DEFAULT_OPTS "--color 16 --cycle --layout=reverse --border --height=
 mise activate fish | source
 # [ mise ]
 
+# [ uv ]
+uv generate-shell-completion fish | source
+uvx --generate-shell-completion fish | source
+# [ uv ]
+
 # [ npm ]
 set -gx NPM_PACKAGES "$HOME/.local/share/npm_packages"
 fish_add_path $NPM_PACKAGES/bin
