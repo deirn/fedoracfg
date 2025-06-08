@@ -111,9 +111,18 @@
 (my/assoc-ext "service" 'systemd-mode)
 
 
+;; Tree-sitter
+(use-package! tree-sitter
+  :init
+  ;; Use tree-sitter globally.
+  (global-tree-sitter-mode)
+  (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
+
+
 ;; Prisma
 (my/assoc-ext "prisma" 'prisma-mode)
 (after! prisma-mode (add-hook 'prisma-mode-hook #'lsp! 'append))
+
 
 ;; Svelte
 ;; (use-package! svelte-mode :after '(typescript-mode javascript-mode))
