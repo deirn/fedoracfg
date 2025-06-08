@@ -111,12 +111,19 @@
 (my/assoc-ext "service" 'systemd-mode)
 
 
-;; Tree-sitter
-(use-package! tree-sitter
-  :init
-  ;; Use tree-sitter globally.
-  (global-tree-sitter-mode)
-  (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
+;; Tree-sitter (elisp)
+;; (use-package! tree-sitter
+;;   :init
+;;   ;; Use tree-sitter globally.
+;;   (global-tree-sitter-mode)
+;;   (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
+
+
+;; Tree-sitter (built-in)
+(use-package! treesit
+  :config
+  ;; https://github.com/doomemacs/doomemacs/issues/7623#issuecomment-2916160800
+  (setq treesit-extra-load-path (append '("~/.config/emacs/.local/etc/tree-sitter") treesit-extra-load-path)))
 
 
 ;; Prisma
