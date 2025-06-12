@@ -93,6 +93,7 @@ abbr -a fetch fastfetch
 abbr -a enw emacs -nw
 abbr -a rm trash
 abbr -a rm! /usr/bin/rm
+abbr -a c clear
 
 alias protontricks="flatpak run com.github.Matoking.protontricks"
 alias protontricks-launch="flatpak run --command=protontricks-launch com.github.Matoking.protontricks"
