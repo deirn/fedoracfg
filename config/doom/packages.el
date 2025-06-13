@@ -52,11 +52,18 @@
 (package! trashed)
 (package! svelte-mode)
 (package! vimrc-mode)
-(package! lsp-tailwindcss :recipe (:host github :repo "merrickluo/lsp-tailwindcss"))
+;; (package! lsp-tailwindcss :recipe (:host github :repo "merrickluo/lsp-tailwindcss"))
 (package! prisma-mode :recipe (:host github :repo "pimeys/emacs-prisma-mode" :branch "main"))
 (package! string-edit :recipe (:host github :repo "magnars/string-edit.el"))
 (package! mise)
 (package! systemd-mode :recipe (:files ("*.el" "*directives.txt")))
+
+;; lsp-bridge dependencies, the actual lsp-bridge is in `../../share/lsp-bridge'
+(package! lsp-mode :disable t)
+(package! tide :disable t)
+(package! markdown-mode)
+(package! yasnippet)
+(package! flymake-bridge :recipe (:host github :repo "eki3z/flymake-bridge"))
 
 ;; (package! discord-rp
 ;;   :recipe (:host nil

@@ -118,7 +118,6 @@
 ;;   (global-tree-sitter-mode)
 ;;   (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
 
-
 ;; Tree-sitter (built-in)
 (use-package! treesit
   :config
@@ -126,9 +125,13 @@
   (setq treesit-extra-load-path (append '("~/.config/emacs/.local/etc/tree-sitter") treesit-extra-load-path)))
 
 
+;; lsp-bridge
+(load! "lsp-bridge")
+
+
 ;; Prisma
 (my/assoc-ext "prisma" 'prisma-mode)
-(after! prisma-mode (add-hook 'prisma-mode-hook #'lsp! 'append))
+;; (after! prisma-mode (add-hook 'prisma-mode-hook #'lsp! 'append))
 
 
 ;; Svelte
@@ -139,11 +142,11 @@
 
 
 ;; TODO: TailwindCSS
-(use-package! lsp-tailwindcss
-  :after lsp-mode
-  :init
-  (setq lsp-tailwindcss-add-on-mode t
-        lsp-tailwindcss-server-version "0.14.8"))
+;; (use-package! lsp-tailwindcss
+;;   :after lsp-mode
+;;   :init
+;;   (setq lsp-tailwindcss-add-on-mode t
+;;         lsp-tailwindcss-server-version "0.14.8"))
 ;; lsp-tailwindcss-skip-config-check t))
 
 
@@ -168,16 +171,16 @@
   (map! :map vterm-mode-map "C-c ESC" #'vterm-send-escape))
 
 
-(after! lsp-java
-  ;; Configure Java configuration runtimes, generated in ../packages.nix
-  (load! "~/.jdk/doom.el" nil t)
-  ;; Download newer jdtls that supports newer Java.
-  ;; Run `lsp-update-server' after changed.
-  ;; https://github.com/emacs-lsp/lsp-java/issues/478
-  ;; https://download.eclipse.org/jdtls/milestones/
-  (setq lsp-java-jdt-download-url "https://www.eclipse.org/downloads/download.php?file=/jdtls/milestones/1.47.0/jdt-language-server-1.47.0-202505151856.tar.gz")
-  ;; Give jdtls 2GB max
-  (setq lsp-java-vmargs '("-XX:+UseParallelGC" "-XX:GCTimeRatio=4" "-XX:AdaptiveSizePolicyWeight=90" "-Dsun.zip.disableMemoryMapping=true" "-Xmx2G" "-Xms100m")))
+;; (after! lsp-java
+;;   ;; Configure Java configuration runtimes, generated in ../packages.nix
+;;   (load! "~/.jdk/doom.el" nil t)
+;;   ;; Download newer jdtls that supports newer Java.
+;;   ;; Run `lsp-update-server' after changed.
+;;   ;; https://github.com/emacs-lsp/lsp-java/issues/478
+;;   ;; https://download.eclipse.org/jdtls/milestones/
+;;   (setq lsp-java-jdt-download-url "https://www.eclipse.org/downloads/download.php?file=/jdtls/milestones/1.47.0/jdt-language-server-1.47.0-202505151856.tar.gz")
+;;   ;; Give jdtls 2GB max
+;;   (setq lsp-java-vmargs '("-XX:+UseParallelGC" "-XX:GCTimeRatio=4" "-XX:AdaptiveSizePolicyWeight=90" "-Dsun.zip.disableMemoryMapping=true" "-Xmx2G" "-Xms100m")))
 
 
 (after! dape
@@ -185,11 +188,11 @@
   (setq dape-debug t))
 
 
-;; Dart/Flutter
-;; https://emacs-lsp.github.io/lsp-dart
-(after! lsp-dart
-  ;; Disable widget guides as it has performance issue
-  (setq lsp-dart-flutter-widget-guides nil))
+;; ;; Dart/Flutter
+;; ;; https://emacs-lsp.github.io/lsp-dart
+;; (after! lsp-dart
+;;   ;; Disable widget guides as it has performance issue
+;;   (setq lsp-dart-flutter-widget-guides nil))
 
 ;; Enable hot restart on flutter dape
 ;; https://github.com/svaante/dape/issues/201#issuecomment-2652795449
@@ -229,26 +232,26 @@
 ;;   '(treemacs-root-face :height 1.0))
 
 
-(after! lsp-mode
-  ;; https://emacs-lsp.github.io/lsp-mode/tutorials/how-to-turn-off/
-  (setq lsp-signature-auto-activate nil
-        lsp-signature-render-documentation nil
-        lsp-headerline-breadcrumb-enable t
-        lsp-headerline-breadcrumb-icons-enable nil
-        lsp-eldoc-enable-hover nil
-        ;; Always ask before executing actions even for single action
-        lsp-auto-execute-action nil)
-  ;; Add directories to ignore from LSP watch
-  (dolist (dir '("[/\\\\]\\.devenv"
-                 "[/\\\\]\\.direnv"))
-    (push dir lsp-file-watch-ignored-directories))
-  ;; LSP for Fish shell
-  (lsp-register-client
-   (make-lsp-client
-    :new-connection (lsp-stdio-connection '("fish-lsp" "start"))
-    :activation-fn (lsp-activate-on "fish")
-    :server-id 'fish-lsp))
-  (add-hook 'fish-mode-hook #'lsp))
+;; (after! lsp-mode
+;;   ;; https://emacs-lsp.github.io/lsp-mode/tutorials/how-to-turn-off/
+;;   (setq lsp-signature-auto-activate nil
+;;         lsp-signature-render-documentation nil
+;;         lsp-headerline-breadcrumb-enable t
+;;         lsp-headerline-breadcrumb-icons-enable nil
+;;         lsp-eldoc-enable-hover nil
+;;         ;; Always ask before executing actions even for single action
+;;         lsp-auto-execute-action nil)
+;;   ;; Add directories to ignore from LSP watch
+;;   (dolist (dir '("[/\\\\]\\.devenv"
+;;                  "[/\\\\]\\.direnv"))
+;;     (push dir lsp-file-watch-ignored-directories))
+;;   ;; LSP for Fish shell
+;;   (lsp-register-client
+;;    (make-lsp-client
+;;     :new-connection (lsp-stdio-connection '("fish-lsp" "start"))
+;;     :activation-fn (lsp-activate-on "fish")
+;;     :server-id 'fish-lsp))
+;;   (add-hook 'fish-mode-hook #'lsp))
 
 
 ;; HACK: Translate C-i to H-i so it can be used in daemon mode

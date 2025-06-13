@@ -5,80 +5,94 @@
 
 (load (expand-file-name "init-elpaca" user-emacs-directory))
 
-(defmacro use-package! (name &rest rest)
-  `(use-package ,name :ensure t ,@rest))
-
 
 ;;; UI
 
-(use-package! doom-themes
+(use-package doom-themes
+  :ensure t
   :config
   (load-theme 'doom-one t))
 
-(use-package! doom-modeline
-  :init (doom-modeline-mode 1))
+(use-package doom-modeline
+  :ensure t
+  :config (doom-modeline-mode))
 
-;; disable builtin tool bars
-(tool-bar-mode -1)
-(scroll-bar-mode -1)
-(menu-bar-mode -1)
+(use-package emacs
+  :ensure nil
+  :config
 
-(setq display-line-numbers-grow-only t)   ;; prevents shrinking
-(setq display-line-numbers-width-start t)
-(setq display-line-numbers-type 'relative)
-(add-hook 'prog-mode-hook #'display-line-numbers-mode)
+  ;; disable builtin tool bars
+  (tool-bar-mode -1)
+  (scroll-bar-mode -1)
+  (menu-bar-mode -1)
 
-;; highlight current line
-(global-hl-line-mode)
+  (setq display-line-numbers-grow-only t   ;; prevents shrinking
+        display-line-numbers-width-start t
+        display-line-numbers-type 'relative)
+  (add-hook 'prog-mode-hook #'display-line-numbers-mode)
 
-;; disable bell sound
-(setq ring-bell-function 'ignore)
+  ;; highlight current line
+  (global-hl-line-mode)
 
-;; less jumpy scroll
-(setq scroll-step 1
-      scroll-margin 0
-      scroll-conservatively 100000
-      auto-window-vscroll nil
-      scroll-preserve-screen-position t)
+  (which-key-mode)
 
-;; set font
-(set-face-attribute 'default nil
-                    :family "JetBrainsMono Nerd Font"
-                    :height 105)
+  ;; disable bell sound
+  (setq ring-bell-function 'ignore)
 
-;; Increase window divider size
-(setq window-divider-default-bottom-width 5
-      window-divider-default-right-width 5)
+  ;; less jumpy scroll
+  (setq scroll-step 1
+        scroll-margin 0
+        scroll-conservatively 100000
+        auto-window-vscroll nil
+        scroll-preserve-screen-position t)
+
+  ;; set font
+  (set-face-attribute 'default nil
+                      :family "JetBrainsMono Nerd Font"
+                      :height 105)
+
+  ;; Increase window divider size
+  (setq window-divider-default-bottom-width 5
+        window-divider-default-right-width 5))
 
 ;;; Evil
 
-(use-package! evil
+(use-package evil
+  :ensure t
   :init
   (setq evil-want-keybinding nil)
   :config
   (evil-mode))
 
-(use-package! evil-collection :config (evil-collection-init))
-(use-package! vi-tilde-fringe :config (global-vi-tilde-fringe-mode))
+(use-package evil-collection :ensure t :config (evil-collection-init))
+(use-package vi-tilde-fringe :ensure t :config (global-vi-tilde-fringe-mode))
 
 
 ;;; Minibuffer
 
-(use-package! vertico :config (vertico-mode))
-(use-package! marginalia :config (marginalia-mode))
-(use-package! consult)
-(use-package! embark)
-(use-package! embark-consult)
+(use-package vertico :ensure t :config (vertico-mode))
+(use-package marginalia :ensure t :config (marginalia-mode))
+(use-package consult :ensure t)
+(use-package embark :ensure t)
+(use-package embark-consult :ensure t)
 
 
 ;;; Magit
 
-(use-package! transient)
-(use-package! magit)
+(use-package transient :ensure t)
+(use-package magit :ensure t)
 
 
 ;;; Code
 
-(use-package! flycheck :config (global-flycheck-mode))
+(use-package flymake :ensure t)
+
+(use-package treesit-auto
+  :ensure t
+  :custom
+  (treesit-auto-install 'prompt)
+  :config
+  (treesit-auto-add-to-auto-mode-alist 'all)
+  (global-treesit-auto-mode))
 
 ;;; init.el ends here
