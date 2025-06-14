@@ -2,5 +2,4 @@
 !.gitignore
 
 !early-init.el
-!init.el
-!init-elpaca.el
+!init*.el

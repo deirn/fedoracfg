@@ -44,4 +44,7 @@
   ;; Enable use-package :ensure support for Elpaca.
   (elpaca-use-package-mode))
 
+;; :ensure by default
+(setq use-package-always-ensure t)
+
 ;;; init-elpaca.el ends here
