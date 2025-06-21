@@ -46,6 +46,10 @@
   (tab-width 4)
   (standard-indent 4)
 
+  ;; disable backup `.#' and lockfiles `~'
+  (create-lockfiles nil)
+  (make-backup-files nil)
+
   :config
   (set-face-attribute 'default nil
                       :family "JetBrainsMono Nerd Font"
@@ -137,7 +141,9 @@
   (global-evil-mc-mode))
 
 (use-package evil-nerd-commenter
-  :after evil)
+  :after evil
+  :init
+  (evilnc-default-hotkeys))
 
 (use-package vi-tilde-fringe
   :init
