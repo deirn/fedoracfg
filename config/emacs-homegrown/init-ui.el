@@ -37,10 +37,17 @@
   (load-theme 'doom-one t))
 
 (use-package doom-modeline
-  :config (doom-modeline-mode))
+  :config
+  (doom-modeline-mode))
+
+(use-package solaire-mode
+  :config
+  (solaire-global-mode))
 
 (use-package rainbow-delimiters
   :hook
   (prog-mode . rainbow-delimiters-mode))
+
+(use-package nerd-icons)
 
 ;;; init-ui.el ends here
