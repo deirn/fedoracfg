@@ -9,13 +9,6 @@
 (use-package markdown-mode)
 (use-package dart-mode)
 
-(defun -my/enable-lsp-for (modes)
-  (dolist (mode modes)
-    (add-hook (intern (concat (symbol-name mode) "-mode-hook")) #'-my/enable-lsp-bridge)
-    (add-hook (intern (concat (symbol-name mode) "-ts-mode-hook")) #'-my/enable-lsp-bridge)))
-
-(-my/enable-lsp-for '(dart typescript))
-
 (use-package nerd-icons)
 (use-package transient)
 (use-package magit)
@@ -94,6 +87,43 @@
 (use-package projectile
   :init
   (projectile-mode))
+
+(use-package dashboard
+  :after (projectile nerd-icons)
+  :custom
+  (dashboard-center-content t)
+  (dashboard-vertically-center-content t)
+  (dashboard-display-icons-p t)
+  (dashboard-icon-type 'nerd-icons)
+  (dashboard-set-heading-icons t)
+  (dashboard-set-file-icons t)
+  (dashboard-projects-backend 'projectile)
+  (dashboard-items '((recents  . 5)
+                     (projects . 5)))
+  (initial-buffer-choice 'dashboard-open)
+
+  :hook
+  (window-size-change-functions . my/schedule-dashboard-refresh)
+
+  :config
+  (defun my/dashboard-refresh ()
+    (with-current-buffer "*dashboard*"
+      (let ((inhibit-read-only t))
+        (dashboard-insert-startupify-lists t))))
+
+  (defvar my/dashboard-resize-timer nil
+    "Idle timer for debounced dashboard refresh.")
+
+  (defun my/schedule-dashboard-refresh (&optional _)
+    "Schedule dashboard refresh after resize."
+    (when my/dashboard-resize-timer
+      (cancel-timer my/dashboard-resize-timer))
+    (setq my/dashboard-resize-timer
+          (run-with-idle-timer
+           0.2 nil
+           (lambda ()
+             (when (get-buffer "*dashboard*")
+               (my/dashboard-refresh)))))))
 
 (use-package dirvish
   :custom
@@ -235,7 +265,10 @@
   (acm-enable-capf t)
   (acm-enable-icon t)
   (acm-enable-tabnine nil)
-  (acm-candidate-match-function #'orderless-flex))
+  (acm-candidate-match-function #'orderless-flex)
+
+  :hook
+  (prog-mode . -my/enable-lsp-bridge))
 
 (use-package flymake-bridge
   :after flymake
@@ -268,8 +301,12 @@
   "Format buffer using apheleia or lsp-bridge."
   (interactive)
   (if (my/has-lsp)
-      (call-interactively #'lsp-bridge-code-format)
-    (call-interactively #'apheleia-format-buffer)))
+      (progn
+        (call-interactively #'lsp-bridge-code-format)
+        (message "Formatted using lsp-bridge"))
+    (progn
+      (call-interactively #'apheleia-format-buffer)
+      (message "Formatted using apheleia"))))
 
 (defun my/show-documentation ()
   "Show documentation at point."
@@ -278,6 +315,11 @@
       (call-interactively #'lsp-bridge-show-documentation)
     (call-interactively #'helpful-at-point)))
 
+(defun my/open-config ()
+  "Open Emacs configuration."
+  (interactive)
+  (find-file (read-file-name "Find file in config: " user-emacs-directory)))
+
 (use-package general
   :config
   (general-def
@@ -285,16 +327,17 @@
     :keymaps 'override
     :prefix "SPC"
     :global-prefix "C-SPC"
-    "b"     '(:ignore t                        :which-key "buffers")
-    "b b"   '(switch-to-buffer                 :which-key "switch buffer")
-    "b k"   '(magit-kill-this-buffer           :which-key "kill buffer")
-    "b n"   '(next-buffer                      :which-key "next buffer")
-    "b p"   '(previous-buffer                  :which-key "previous buffer")
+    "b"     '(:ignore t                        :which-key "buffer")
+    "b b"   '(switch-to-buffer                 :which-key "switch")
+    "b k"   '(magit-kill-this-buffer           :which-key "kill")
+    "b n"   '(next-buffer                      :which-key "next")
+    "b p"   '(previous-buffer                  :which-key "previous")
+    "b r"   '(revert-buffer                    :which-key "revert")
 
-    "f"     '(:ignore t                        :which-key "files")
-    "f f"   '(find-file                        :which-key "find file")
-    "f s"   '(save-buffer                      :which-key "save file")
-    "f r"   '(recentf-open-files               :which-key "recent files")
+    "f"     '(:ignore t                        :which-key "file")
+    "f f"   '(find-file                        :which-key "find")
+    "f s"   '(save-buffer                      :which-key "save")
+    "f r"   '(recentf                          :which-key "recent files")
 
     "g"     '(:ignore t                        :which-key "git")
     "g g"   '(magit-status                     :which-key "magit status")
@@ -305,6 +348,11 @@
     "c D"   '(flymake-show-project-diagnostics :which-key "project diagnostics")
     "c f"   '(my/format-buffer                 :which-key "format")
     "c r"   '(lsp-bridge-rename                :which-key "rename symbol")
+
+    "o"     '(:ignore t                        :which-key "open")
+    "o c"   '(my/open-config                   :which-key "config")
+    "o d"   '(dashboard-open                   :which-key "dashboard")
+    "o p"   '(dirvish-side                     :which-key "project view")
 
     "p"     '(:ignore t                        :which-key "project")
     "p a"   '(projectile-add-known-project     :which-key "switch project")
