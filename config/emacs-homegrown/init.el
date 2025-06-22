@@ -5,15 +5,17 @@
 
 (load (expand-file-name "bootstrap-elpaca" user-emacs-directory))
 
+(use-package gcmh
+  :config
+  (gcmh-mode 1))
+
 ;; language modes
-(use-package markdown-mode)
-(use-package dart-mode)
+(use-package markdown-mode :mode "\\.md\\'")
+(use-package dart-mode     :mode "\\.dart\\'")
 
 (use-package nerd-icons)
-(use-package transient)
-(use-package magit)
-(use-package helpful)
-(use-package apheleia)
+(use-package transient :defer t)
+(use-package apheleia :defer t)
 
 (use-package emacs
   :ensure nil
@@ -56,29 +58,30 @@
   (menu-bar-mode -1)
 
   ;; highlight current line
-  (global-hl-line-mode)
+  (global-hl-line-mode 1)
 
   ;; auto brackets closing
-  (electric-pair-mode)
+  (electric-pair-mode 1)
 
-  (window-divider-mode)
-  (which-key-mode)
+  (window-divider-mode 1)
+  (which-key-mode 1)
 
   :hook
   (prog-mode . display-line-numbers-mode)
   (before-save . delete-trailing-whitespace))
 
-(use-package doom-themes
-  :config
-  (load-theme 'doom-one t))
+(use-package doom-themes :defer t)
+(use-package doom-modeline :defer t)
+(use-package solaire-mode :defer t)
+(use-package vi-tilde-fringe :defer t)
 
-(use-package doom-modeline
-  :config
-  (doom-modeline-mode))
-
-(use-package solaire-mode
-  :config
-  (solaire-global-mode))
+(run-with-idle-timer
+ 0.2 nil
+ (lambda ()
+   (load-theme 'doom-one t)
+   (doom-modeline-mode 1)
+   (solaire-global-mode 1)
+   (global-vi-tilde-fringe-mode 1)))
 
 (use-package rainbow-delimiters
   :hook
@@ -86,10 +89,10 @@
 
 (use-package projectile
   :init
-  (projectile-mode))
+  (projectile-mode 1))
 
 (use-package dashboard
-  :after (projectile nerd-icons)
+  :after (projectile)
   :custom
   (dashboard-center-content t)
   (dashboard-vertically-center-content t)
@@ -131,15 +134,30 @@
   (dirvish-subtree-state-style 'nerd)
   (dirvish-attributes '(nerd-icons vc-state file-size file-time))
   (dirvish-side-attributes '(nerd-icons collapse vc-state file-size))
+  (dirvish-hide-details '(dirvish-side))
+  (dirvish-reuse-session)
 
   :init
   (dirvish-override-dired-mode)
 
   :config
-  (dirvish-side-follow-mode)
+  (dirvish-side-follow-mode 1)
+  (put 'dired-find-alternate-file 'disabled nil)
 
   :hook
   (dired-mode . dired-omit-mode))
+
+(use-package diredfl
+  :after dirvish
+  :hook
+  (dired-mode . diredfl-mode)
+  (dirvish-directory-view-mode . diredfl-mode))
+
+(use-package magit
+  :commands (magit-status))
+
+(use-package helpful
+  :commands (helpful-at-point))
 
 (use-package evil
   :custom
@@ -147,7 +165,7 @@
   (evil-undo-system 'undo-redo)
 
   :config
-  (evil-mode))
+  (evil-mode 1))
 
 (use-package evil-collection
   :after evil
@@ -157,34 +175,29 @@
 (use-package evil-surround
   :after evil
   :config
-  (global-evil-surround-mode))
+  (global-evil-surround-mode 1))
 
 (use-package evil-snipe
   :after evil
   :config
-  (evil-snipe-mode)
-  (evil-snipe-override-mode))
+  (evil-snipe-mode 1)
+  (evil-snipe-override-mode 1))
 
 (use-package evil-mc
   :after evil
   :config
-  (global-evil-mc-mode))
+  (global-evil-mc-mode 1))
 
 (use-package evil-nerd-commenter
   :after evil
   :init
   (evilnc-default-hotkeys))
 
-(use-package vi-tilde-fringe
-  :init
-  (global-vi-tilde-fringe-mode))
-
 (use-package treesit-auto
   :custom
   (treesit-auto-install 'prompt)
   :config
-  (treesit-auto-add-to-auto-mode-alist 'all)
-  (global-treesit-auto-mode))
+  (global-treesit-auto-mode 1))
 
 (use-package combobulate
   :ensure (:host github :repo "mickeynp/combobulate")
@@ -200,25 +213,20 @@
   (corfu-quit-no-match 'separator)
 
   :init
-  (global-corfu-mode))
+  (global-corfu-mode 1))
 
 (use-package vertico
   :config
-  (vertico-mode))
+  (vertico-mode 1))
 
 (use-package marginalia
   :after vertico
   :config
-  (marginalia-mode))
+  (marginalia-mode 1))
 
-(use-package consult
-  :after vertico)
-
-(use-package embark
-  :after (vertico marginalia))
-
-(use-package embark-consult
-  :after (embark consult))
+(use-package consult)
+(use-package embark)
+(use-package embark-consult :after embark)
 
 (use-package orderless
   :custom
@@ -227,14 +235,15 @@
   (completion-category-overrides '((file (styles partial-completion)))))
 
 (use-package yasnippet
+  :defer t
   :init
-  (yas-global-mode))
+  (yas-global-mode 1))
 
-(use-package yasnippet-snippets
-  :after yasnippet)
+(use-package yasnippet-snippets :after yasnippet :defer t)
 
 (use-package cape
-  :init
+  :defer t
+  :config
   (add-to-list 'completion-at-point-functions #'cape-dabbrev)
   (add-to-list 'completion-at-point-functions #'cape-file))
 
@@ -246,6 +255,12 @@
 (use-package flymake
   :hook
   (prog-mode . flymake-mode))
+
+(use-package dape
+  :commands (dape)
+  :hook
+  (kill-emacs . dape-breakpoint-save)
+  (after-init . dape-breakpoint-load))
 
 (add-to-list 'load-path (expand-file-name "share/lsp-bridge" (getenv "FEDORACFG")))
 (use-package lsp-bridge
@@ -320,6 +335,34 @@
   (interactive)
   (find-file (read-file-name "Find file in config: " user-emacs-directory)))
 
+(defun my/kill-other-buffers ()
+  "Kill all other buffers except the current one and essential buffers."
+  (interactive)
+  (let* ((current (current-buffer))
+         (target-name '("*dashboard*"
+                        "*Help*"
+                        "*Ibuffer*"))
+         (target-mode '("Helpful"))
+         (killed-count 0))
+    (dolist (buf (buffer-list))
+      (unless (eq buf current)
+        (let ((name (buffer-name buf))
+              (mode (buffer-local-value 'mode-name buf)))
+          (when (or (and (not (string-prefix-p "*" name)) ; keep `*' and ` ' by default
+                         (not (string-prefix-p " " name)))
+                    (member name target-name)             ; delete explicit ones
+                    (member mode target-mode))
+            (kill-buffer buf)
+            (cl-incf killed-count)
+            (message "Killed %s" name)))))
+    (message "Killed %d buffer(s)." killed-count)))
+
+(defun my/reload-init ()
+  "Reload Emacs init.el."
+  (interactive)
+  (load-file (expand-file-name "init.el" user-emacs-directory))
+  (message "init.el reloaded!"))
+
 (use-package general
   :config
   (general-def
@@ -329,7 +372,9 @@
     :global-prefix "C-SPC"
     "b"     '(:ignore t                        :which-key "buffer")
     "b b"   '(switch-to-buffer                 :which-key "switch")
+    "b i"   '(ibuffer                          :which-key "switch")
     "b k"   '(magit-kill-this-buffer           :which-key "kill")
+    "b K"   '(my/kill-other-buffers            :which-key "kill other buffer")
     "b n"   '(next-buffer                      :which-key "next")
     "b p"   '(previous-buffer                  :which-key "previous")
     "b r"   '(revert-buffer                    :which-key "revert")
@@ -338,6 +383,10 @@
     "f f"   '(find-file                        :which-key "find")
     "f s"   '(save-buffer                      :which-key "save")
     "f r"   '(recentf                          :which-key "recent files")
+
+    "e"     '(:ignore t                        :which-key "emacs")
+    "e c"   '(my/open-config                   :which-key "open config")
+    "e r"   '(my/reload-init                   :which-key "reload init.el")
 
     "g"     '(:ignore t                        :which-key "git")
     "g g"   '(magit-status                     :which-key "magit status")
@@ -350,8 +399,8 @@
     "c r"   '(lsp-bridge-rename                :which-key "rename symbol")
 
     "o"     '(:ignore t                        :which-key "open")
-    "o c"   '(my/open-config                   :which-key "config")
     "o d"   '(dashboard-open                   :which-key "dashboard")
+    "o o"   '(dired                            :which-key "dired")
     "o p"   '(dirvish-side                     :which-key "project view")
 
     "p"     '(:ignore t                        :which-key "project")
@@ -387,6 +436,15 @@
     :keymaps 'override
     "A" #'evil-mc-make-cursor-in-visual-selection-end
     "I" #'evil-mc-make-cursor-in-visual-selection-beg
+    )
+
+  (general-def
+    :keymaps 'dirvish-mode-map
+    :states '(normal motion)
+    "TAB" #'dirvish-subtree-toggle
+    "h"   #'dired-up-directory
+    "l"   #'dired-find-alternate-file
+    "RET" #'dired-find-alternate-file
     )
   )
 
