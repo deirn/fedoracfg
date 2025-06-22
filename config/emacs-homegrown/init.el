@@ -135,7 +135,6 @@
   (dirvish-attributes '(nerd-icons vc-state file-size file-time))
   (dirvish-side-attributes '(nerd-icons collapse vc-state file-size))
   (dirvish-hide-details '(dirvish-side))
-  (dirvish-reuse-session)
 
   :init
   (dirvish-override-dired-mode)
@@ -143,6 +142,7 @@
   :config
   (dirvish-side-follow-mode 1)
   (put 'dired-find-alternate-file 'disabled nil)
+  (add-to-list 'dirvish-side-window-parameters '(my/dirvish-side . t))
 
   :hook
   (dired-mode . dired-omit-mode))
@@ -363,6 +363,18 @@
   (load-file (expand-file-name "init.el" user-emacs-directory))
   (message "init.el reloaded!"))
 
+(defun my/dirvish-open-file ()
+  "Open file in main window, or open directory in current window."
+  (interactive)
+  (if (not (window-parameter nil 'my/dirvish-side))
+      (call-interactively #'dired-find-alternate-file)
+    (let ((file (dired-get-file-for-visit)))
+      (if (file-directory-p file)
+          (call-interactively #'dired-find-alternate-file)
+        (progn
+          (select-window (get-mru-window nil t t))
+          (find-file file))))))
+
 (use-package general
   :config
   (general-def
@@ -443,8 +455,8 @@
     :states '(normal motion)
     "TAB" #'dirvish-subtree-toggle
     "h"   #'dired-up-directory
-    "l"   #'dired-find-alternate-file
-    "RET" #'dired-find-alternate-file
+    "l"   #'my/dirvish-open-file
+    "RET" #'my/dirvish-open-file
     )
   )
 
