@@ -9,17 +9,37 @@
   :config
   (gcmh-mode 1))
 
+(use-package exec-path-from-shell
+  :init
+  (when (memq window-system '(mac ns x))
+    (exec-path-from-shell-initialize)))
+
+(defcustom my/late-hook nil
+  "Hook that runs after startup."
+  :type 'hook)
+
 ;; language modes
 (use-package markdown-mode :mode "\\.md\\'")
-(use-package dart-mode     :mode "\\.dart\\'")
+(use-package fish-mode     :mode "\\.fish\\'")
 
-(use-package nerd-icons)
+(use-package lua-ts-mode :ensure nil :mode "\\.lua\\'")
+
+(use-package dart-ts-mode
+  :ensure (:host github :repo "50ways2sayhard/dart-ts-mode")
+  :mode "\\.dart\\'"
+  :config
+  (add-to-list 'treesit-language-source-alist '(dart . ("https://github.com/UserNobody14/tree-sitter-dart")))
+  (add-to-list 'lsp-bridge-single-lang-server-mode-list '(dart-ts-mode . "dart-analysis-server")))
+
+(use-package nerd-icons :defer t)
 (use-package transient :defer t)
 (use-package apheleia :defer t)
 
 (use-package emacs
   :ensure nil
   :custom
+  (custom-file (expand-file-name "custom.el" user-emacs-directory))
+
   (display-line-numbers-grow-only t)
   (display-line-numbers-width-start t)
   (display-line-numbers-type 'relative)
@@ -45,43 +65,40 @@
   (create-lockfiles nil)
   (make-backup-files nil)
 
+  (which-key-sort-order 'which-key-key-order-alpha)
+  (which-key-sort-uppercase-first nil)
+  (which-key-dont-use-unicode nil)
+  (which-key-add-column-padding 2)
+
   :config
   (set-face-attribute 'default nil
                       :family "JetBrainsMono Nerd Font"
                       :height 105)
 
   (fset #'yes-or-no-p #'y-or-n-p)
-
-  ;; disable builtin tool bars
-  (tool-bar-mode -1)
-  (scroll-bar-mode -1)
-  (menu-bar-mode -1)
-
-  ;; highlight current line
-  (global-hl-line-mode 1)
-
-  ;; auto brackets closing
-  (electric-pair-mode 1)
-
-  (window-divider-mode 1)
-  (which-key-mode 1)
-
   :hook
   (prog-mode . display-line-numbers-mode)
-  (before-save . delete-trailing-whitespace))
+  (before-save . delete-trailing-whitespace)
+  (my/late . global-hl-line-mode)
+  (my/late . electric-pair-mode)
+  (my/late . which-key-mode)
+  (my/late . window-divider-mode))
 
-(use-package doom-themes :defer t)
-(use-package doom-modeline :defer t)
-(use-package solaire-mode :defer t)
-(use-package vi-tilde-fringe :defer t)
+(use-package doom-themes
+  :hook
+  (my/late . (lambda () (load-theme 'doom-one t))))
 
-(run-with-idle-timer
- 0.2 nil
- (lambda ()
-   (load-theme 'doom-one t)
-   (doom-modeline-mode 1)
-   (solaire-global-mode 1)
-   (global-vi-tilde-fringe-mode 1)))
+(use-package doom-modeline
+  :hook
+  (my/late . doom-modeline-mode))
+
+(use-package solaire-mode
+  :hook
+  (my/late . solaire-global-mode))
+
+(use-package vi-tilde-fringe
+  :hook
+  (my/late . global-vi-tilde-fringe-mode))
 
 (use-package rainbow-delimiters
   :hook
@@ -123,7 +140,7 @@
       (cancel-timer my/dashboard-resize-timer))
     (setq my/dashboard-resize-timer
           (run-with-idle-timer
-           0.2 nil
+           0.5 nil
            (lambda ()
              (when (get-buffer "*dashboard*")
                (my/dashboard-refresh)))))))
@@ -158,6 +175,13 @@
 
 (use-package helpful
   :commands (helpful-at-point))
+
+;; discord rich presence
+(use-package elcord
+  :custom
+  (elcord-use-major-mode-as-main-icon t)
+  :hook
+  (my/late . elcord-mode))
 
 (use-package evil
   :custom
@@ -377,16 +401,19 @@
 
 (use-package general
   :config
+  (global-unset-key (kbd "C-SPC"))
+
   (general-def
-    :states '(normal visual motion)
+    :states '(normal visual motion emacs)
     :keymaps 'override
     :prefix "SPC"
     :global-prefix "C-SPC"
     "b"     '(:ignore t                        :which-key "buffer")
     "b b"   '(switch-to-buffer                 :which-key "switch")
-    "b i"   '(ibuffer                          :which-key "switch")
-    "b k"   '(magit-kill-this-buffer           :which-key "kill")
-    "b K"   '(my/kill-other-buffers            :which-key "kill other buffer")
+    "b i"   '(ibuffer                          :which-key "ibuffer")
+    "b k"   '(magit-kill-this-buffer           :which-key "kill this")
+    "b l"   '(mode-line-other-buffer           :which-key "last")
+    "b K"   '(my/kill-other-buffers            :which-key "kill others")
     "b n"   '(next-buffer                      :which-key "next")
     "b p"   '(previous-buffer                  :which-key "previous")
     "b r"   '(revert-buffer                    :which-key "revert")
@@ -433,8 +460,10 @@
     "w s v" '(split-window-below               :which-key "vertical")
 
     "t"     '(:ignore t                        :which-key "toggle")
+    "t d"   '(elcord-mode                      :which-key "discord rich presence")
     "t n"   '(display-line-numbers-mode        :which-key "line numbers")
     "t l"   '(my/toggle-lsp-bridge             :which-key "lsp")
+    "t w"   '(whitespace-mode                  :which-key "whitespace")
     )
 
   (general-def
@@ -459,5 +488,10 @@
     "RET" #'my/dirvish-open-file
     )
   )
+
+(run-with-idle-timer
+ 0.2 nil
+ (lambda ()
+   (run-hooks 'my/late-hook)))
 
 ;;; init.el ends here

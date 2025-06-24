@@ -8,4 +8,9 @@
           gc-cons-percentage 1.0)
   (setq gc-cons-threshold most-positive-fixnum))
 
+;; disable builtin tool bars
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+(menu-bar-mode -1)
+
 ;;; early-init.el ends here

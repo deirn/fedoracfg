@@ -48,4 +48,7 @@ c.command_palette_bg_color = tab_bg
 c.command_palette_font = wezterm.font('JetBrains Mono')
 c.command_palette_font_size = 10
 
+-- disable ligatures
+c.harfbuzz_features = { 'calt = 0', 'clig = 0', 'liga = 0' }
+
 return c
