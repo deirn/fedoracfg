@@ -22,7 +22,11 @@
 (use-package markdown-mode :mode "\\.md\\'")
 (use-package fish-mode     :mode "\\.fish\\'")
 
-(use-package lua-ts-mode :ensure nil :mode "\\.lua\\'")
+(use-package systemd
+  :ensure (:files ("*.el" "*directives.txt"))
+  :mode ("\\.service\\'" . systemd-mode)
+  :init
+  (add-hook 'systemd-mode-hook #'display-line-numbers-mode))
 
 (use-package dart-ts-mode
   :ensure (:host github :repo "50ways2sayhard/dart-ts-mode")
@@ -104,6 +108,9 @@
   :hook
   (prog-mode . rainbow-delimiters-mode))
 
+(use-package hide-mode-line
+  :commands (hide-mode-line-mode))
+
 (use-package projectile
   :init
   (projectile-mode 1))
@@ -144,7 +151,6 @@
            (lambda ()
              (when (get-buffer "*dashboard*")
                (my/dashboard-refresh)))))))
-
 (use-package dirvish
   :custom
   (delete-by-moving-to-trash t)
@@ -221,6 +227,7 @@
   :custom
   (treesit-auto-install 'prompt)
   :config
+  (treesit-auto-add-to-auto-mode-alist 'all)
   (global-treesit-auto-mode 1))
 
 (use-package combobulate
@@ -411,21 +418,21 @@
     "b"     '(:ignore t                        :which-key "buffer")
     "b b"   '(switch-to-buffer                 :which-key "switch")
     "b i"   '(ibuffer                          :which-key "ibuffer")
-    "b k"   '(magit-kill-this-buffer           :which-key "kill this")
+    "b k"   '(kill-current-buffer              :which-key "kill this")
     "b l"   '(mode-line-other-buffer           :which-key "last")
     "b K"   '(my/kill-other-buffers            :which-key "kill others")
     "b n"   '(next-buffer                      :which-key "next")
     "b p"   '(previous-buffer                  :which-key "previous")
     "b r"   '(revert-buffer                    :which-key "revert")
 
+    "e"     '(:ignore t                        :which-key "emacs")
+    "e c"   '(my/open-config                   :which-key "open config")
+    "e r"   '(my/reload-init                   :which-key "reload init.el")
+
     "f"     '(:ignore t                        :which-key "file")
     "f f"   '(find-file                        :which-key "find")
     "f s"   '(save-buffer                      :which-key "save")
     "f r"   '(recentf                          :which-key "recent files")
-
-    "e"     '(:ignore t                        :which-key "emacs")
-    "e c"   '(my/open-config                   :which-key "open config")
-    "e r"   '(my/reload-init                   :which-key "reload init.el")
 
     "g"     '(:ignore t                        :which-key "git")
     "g g"   '(magit-status                     :which-key "magit status")
@@ -436,6 +443,7 @@
     "c D"   '(flymake-show-project-diagnostics :which-key "project diagnostics")
     "c f"   '(my/format-buffer                 :which-key "format")
     "c r"   '(lsp-bridge-rename                :which-key "rename symbol")
+    "c s"   '(consult-imenu                    :which-key "symbol list")
 
     "o"     '(:ignore t                        :which-key "open")
     "o d"   '(dashboard-open                   :which-key "dashboard")
