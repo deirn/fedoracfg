@@ -13,4 +13,8 @@
 (scroll-bar-mode -1)
 (menu-bar-mode -1)
 
+(set-face-attribute 'default nil
+                    :background "#282c34"
+                    :foreground "#bbc2cf")
+
 ;;; early-init.el ends here

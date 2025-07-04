@@ -1,7 +1,6 @@
 ;;; init.el -*- lexical-binding: t; -*-
 
-(when (version< emacs-version "30")
-  (error "This requires Emacs 30 and above!"))
+(when (version< emacs-version "30") (error "This requires Emacs 30 and above!"))
 
 (load (expand-file-name "bootstrap-elpaca" user-emacs-directory))
 
@@ -11,7 +10,7 @@
 
 (use-package exec-path-from-shell
   :init
-  (when (memq window-system '(mac ns x))
+  (when (memq window-system '(mac ns x pgtk))
     (exec-path-from-shell-initialize)))
 
 (defcustom my/late-hook nil
@@ -30,7 +29,9 @@
 
 (use-package dart-ts-mode
   :ensure (:host github :repo "50ways2sayhard/dart-ts-mode")
+  :after lsp-bridge
   :mode "\\.dart\\'"
+  :hook (dart-ts-mode . lsp-bridge-mode)
   :config
   (add-to-list 'treesit-language-source-alist '(dart . ("https://github.com/UserNobody14/tree-sitter-dart")))
   (add-to-list 'lsp-bridge-single-lang-server-mode-list '(dart-ts-mode . "dart-analysis-server")))
@@ -42,6 +43,9 @@
 (use-package emacs
   :ensure nil
   :custom
+  (use-dialog-box nil)
+  (confirm-kill-emacs #'yes-or-no-p)
+
   (custom-file (expand-file-name "custom.el" user-emacs-directory))
 
   (display-line-numbers-grow-only t)
@@ -65,6 +69,8 @@
   (tab-width 4)
   (standard-indent 4)
 
+  (line-spacing 0.03)
+
   ;; disable backup `.#' and lockfiles `~'
   (create-lockfiles nil)
   (make-backup-files nil)
@@ -74,15 +80,25 @@
   (which-key-dont-use-unicode nil)
   (which-key-add-column-padding 2)
 
+  (history-length 1000)
+  (savehist-autosave-interval 60)
+  (savehist-additional-variables '(search-ring
+                                   regexp-search-ring
+                                   extended-command-history))
+
   :config
   (set-face-attribute 'default nil
-                      :family "JetBrainsMono Nerd Font"
+                      :family "JetBrains Mono"
                       :height 105)
 
   (fset #'yes-or-no-p #'y-or-n-p)
   :hook
   (prog-mode . display-line-numbers-mode)
+  (conf-mode . display-line-numbers-mode)
+  (text-mode . display-line-numbers-mode)
   (before-save . delete-trailing-whitespace)
+  (my/late . save-place-mode)
+  (my/late . savehist-mode)
   (my/late . global-hl-line-mode)
   (my/late . electric-pair-mode)
   (my/late . which-key-mode)
@@ -235,16 +251,16 @@
   :hook
   (prog-mode . combobulate-mode))
 
-(use-package corfu
-  :custom
-  (corfu-cycle t)
-  (corfu-auto t)
-  (corfu-auto-delay 0.24)
-  (corfu-auto-prefix 2)
-  (corfu-quit-no-match 'separator)
+;; (use-package corfu
+;;   :custom
+;;   (corfu-cycle t)
+;;   (corfu-auto t)
+;;   (corfu-auto-delay 0.24)
+;;   (corfu-auto-prefix 2)
+;;   (corfu-quit-no-match 'separator)
 
-  :init
-  (global-corfu-mode 1))
+;;   :init
+;;   (global-corfu-mode 1))
 
 (use-package vertico
   :config
@@ -274,24 +290,33 @@
 
 (use-package cape
   :defer t
-  :config
-  (add-to-list 'completion-at-point-functions #'cape-dabbrev)
-  (add-to-list 'completion-at-point-functions #'cape-file))
+  :hook
+  (completion-at-point-functions . cape-dabbrev)
+  (completion-at-point-functions . cape-file))
 
-(use-package yasnippet-capf
-  :after (cape yasnippet)
-  :config
-  (add-to-list 'completion-at-point-functions #'yasnippet-capf))
+;; (use-package yasnippet-capf
+;;   :after (cape yasnippet)
+;;   :hook
+;;   (completion-at-point-functions . yasnippet-capf))
 
 (use-package flymake
   :hook
   (prog-mode . flymake-mode))
 
 (use-package dape
+  :after projectile
   :commands (dape)
+
+  :custom
+  (dape-buffer-window-arrangement 'left)
+  (dape-cwd-function #'projectile-project-root)
+
   :hook
   (kill-emacs . dape-breakpoint-save)
-  (after-init . dape-breakpoint-load))
+  (after-init . dape-breakpoint-load)
+
+  :config
+  (dape-breakpoint-global-mode 1))
 
 (add-to-list 'load-path (expand-file-name "share/lsp-bridge" (getenv "FEDORACFG")))
 (use-package lsp-bridge
@@ -301,6 +326,7 @@
   ;; use uv, so it has consistent package version
   (lsp-bridge-python-command "uv")
   (lsp-bridge-enable-hover-diagnostic t)
+
   ;; use flymake-bridge, see below
   (lsp-bridge-diagnostic-enable-overlays nil)
 
@@ -308,35 +334,38 @@
   (lsp-bridge-code-action-preview-delay nil)
   (lsp-bridge-code-action-enable-popup-menu nil)
 
+  (lsp-bridge-enable-completion-in-minibuffer t)
+  (lsp-bridge-enable-completion-in-string t)
+
   (acm-enable-capf t)
   (acm-enable-icon t)
   (acm-enable-tabnine nil)
   (acm-candidate-match-function #'orderless-flex)
 
-  :hook
-  (prog-mode . -my/enable-lsp-bridge))
+  :config
+  (global-lsp-bridge-mode))
 
 (use-package flymake-bridge
   :after flymake
   :ensure (:host github :repo "eki3z/flymake-bridge" :main nil))
 
-(defun my/toggle-lsp-bridge ()
-  "Toggle lsp-bridge to current buffer."
-  (interactive)
-  (if (bound-and-true-p lsp-bridge-mode)
-      (-my/disable-lsp-bridge)
-    (-my/enable-lsp-bridge)))
+;; (defun my/toggle-lsp-bridge ()
+;;   "Toggle lsp-bridge to current buffer."
+;;   (interactive)
+;;   (if (bound-and-true-p lsp-bridge-mode)
+;;       (-my/disable-lsp-bridge)
+;;     (-my/enable-lsp-bridge)))
 
-(defun -my/enable-lsp-bridge ()
-  (lsp-bridge-mode 1)
-  (corfu-mode -1)
-  (flymake-bridge-setup)
-  (message "Enabled lsp-bridge, disabled corfu"))
+;; (defun -my/enable-lsp-bridge ()
+;;   (lsp-bridge-mode 1)
+;;   (corfu-mode -1)
+;;   (flymake-bridge-setup)
+;;   (message "Enabled lsp-bridge, disabled corfu"))
 
-(defun -my/disable-lsp-bridge ()
-  (lsp-bridge-mode -1)
-  (corfu-mode 1)
-  (message "Enabled corfu, disabled lsp-bridge"))
+;; (defun -my/disable-lsp-bridge ()
+;;   (lsp-bridge-mode -1)
+;;   (corfu-mode 1)
+;;   (message "Enabled corfu, disabled lsp-bridge"))
 
 (defun my/has-lsp ()
   "Return whether the current buffer has LSP server."
@@ -360,6 +389,13 @@
   (if (my/has-lsp)
       (call-interactively #'lsp-bridge-show-documentation)
     (call-interactively #'helpful-at-point)))
+
+(defun my/go-to-def ()
+  "Show definition at point."
+  (interactive)
+  (if (my/has-lsp)
+      (call-interactively #'lsp-bridge-find-def)
+    (call-interactively #'evil-goto-definition)))
 
 (defun my/open-config ()
   "Open Emacs configuration."
@@ -415,69 +451,79 @@
     :keymaps 'override
     :prefix "SPC"
     :global-prefix "C-SPC"
-    "b"     '(:ignore t                        :which-key "buffer")
-    "b b"   '(switch-to-buffer                 :which-key "switch")
-    "b i"   '(ibuffer                          :which-key "ibuffer")
-    "b k"   '(kill-current-buffer              :which-key "kill this")
-    "b l"   '(mode-line-other-buffer           :which-key "last")
-    "b K"   '(my/kill-other-buffers            :which-key "kill others")
-    "b n"   '(next-buffer                      :which-key "next")
-    "b p"   '(previous-buffer                  :which-key "previous")
-    "b r"   '(revert-buffer                    :which-key "revert")
+    "b"     '(:ignore t :which-key "buffer")
+    "b b"   '("switch"                . switch-to-buffer)
+    "b i"   '("ibuffer"               . ibuffer)
+    "b k"   '("kill this"             . kill-current-buffer)
+    "b l"   '("last"                  . mode-line-other-buffer)
+    "b K"   '("kill others"           . my/kill-other-buffers)
+    "b n"   '("next"                  . next-buffer)
+    "b p"   '("previous"              . previous-buffer)
+    "b r"   '("revert"                . revert-buffer)
 
-    "e"     '(:ignore t                        :which-key "emacs")
-    "e c"   '(my/open-config                   :which-key "open config")
-    "e r"   '(my/reload-init                   :which-key "reload init.el")
+    "d"     '(:keymap dape-global-map :package dape :which-key "dape")
 
-    "f"     '(:ignore t                        :which-key "file")
-    "f f"   '(find-file                        :which-key "find")
-    "f s"   '(save-buffer                      :which-key "save")
-    "f r"   '(recentf                          :which-key "recent files")
+    "e"     '(:ignore t :which-key "emacs")
+    "e c"   '("open config"           . my/open-config)
+    "e r"   '("reload init.el"        . my/reload-init)
+    "e R"   '("restart"               . restart-emacs)
+    "e q"   '("quit"                  . save-buffers-kill-emacs)
 
-    "g"     '(:ignore t                        :which-key "git")
-    "g g"   '(magit-status                     :which-key "magit status")
+    "f"     '(:ignore t :which-key "file")
+    "f f"   '("find"                  . find-file)
+    "f s"   '("save"                  . save-buffer)
+    "f r"   '("recent files"          . recentf)
 
-    "c"     '(:ignore t                        :which-key "code")
-    "c a"   '(lsp-bridge-code-action           :which-key "action")
-    "c d"   '(flymake-show-buffer-diagnostics  :which-key "diagnostics")
-    "c D"   '(flymake-show-project-diagnostics :which-key "project diagnostics")
-    "c f"   '(my/format-buffer                 :which-key "format")
-    "c r"   '(lsp-bridge-rename                :which-key "rename symbol")
-    "c s"   '(consult-imenu                    :which-key "symbol list")
+    "g"     '(:ignore t :which-key "git")
+    "g g"   '("magit status"          . magit-status)
 
-    "o"     '(:ignore t                        :which-key "open")
-    "o d"   '(dashboard-open                   :which-key "dashboard")
-    "o o"   '(dired                            :which-key "dired")
-    "o p"   '(dirvish-side                     :which-key "project view")
+    "c"     '(:ignore t :which-key "code")
+    "c a"   '("action"                . lsp-bridge-code-action)
+    "c d"   '("definition"            . my/go-to-def)
+    "c e"   '("errors"                . flymake-show-buffer-diagnostics)
+    "c E"   '("project errors"        . flymake-show-project-diagnostics)
+    "c f"   '("format"                . my/format-buffer)
+    "c r"   '("rename symbol"         . lsp-bridge-rename)
+    "c s"   '("symbol list"           . consult-imenu)
 
-    "p"     '(:ignore t                        :which-key "project")
-    "p a"   '(projectile-add-known-project     :which-key "switch project")
-    "p f"   '(projectile-find-file             :which-key "project file")
-    "p p"   '(projectile-switch-project        :which-key "switch project")
+    "o"     '(:ignore t :which-key "open")
+    "o d"   '("dashboard"             . dashboard-open)
+    "o o"   '("dired"                 . dired)
+    "o p"   '("project view"          . dirvish-side)
+    "o s"   '("scratch"               . scratch-buffer)
 
-    "w"     '(:ignore t                        :which-key "window")
-    "w h"   '(evil-window-left                 :which-key "left")
-    "w j"   '(evil-window-down                 :which-key "down")
-    "w k"   '(evil-window-up                   :which-key "up")
-    "w l"   '(evil-window-right                :which-key "right")
-    "w m"   '(delete-other-windows             :which-key "maximize")
-    "w q"   '(delete-window                    :which-key "kill window")
+    "p"     '(:ignore t :which-key "project")
+    "p a"   '("switch project"        . projectile-add-known-project)
+    "p f"   '("project file"          . projectile-find-file)
+    "p p"   '("switch project"        . projectile-switch-project)
 
-    "w s"   '(:ignore t                        :which-key "window split")
-    "w s h" '(split-window-right               :which-key "horizontal")
-    "w s v" '(split-window-below               :which-key "vertical")
+    "w"     '(:ignore t :which-key "window")
+    "w h"   '("left"                  . evil-window-left)
+    "w j"   '("down"                  . evil-window-down)
+    "w k"   '("up"                    . evil-window-up)
+    "w l"   '("right"                 . evil-window-right)
+    "w m"   '("maximize"              . delete-other-windows)
+    "w q"   '("kill window"           . delete-window)
 
-    "t"     '(:ignore t                        :which-key "toggle")
-    "t d"   '(elcord-mode                      :which-key "discord rich presence")
-    "t n"   '(display-line-numbers-mode        :which-key "line numbers")
-    "t l"   '(my/toggle-lsp-bridge             :which-key "lsp")
-    "t w"   '(whitespace-mode                  :which-key "whitespace")
+    "w s"   '(:ignore t :which-key "window split")
+    "w s h" '("horizontal"            . split-window-right)
+    "w s v" '("vertical"              . split-window-below)
+
+    "t"     '(:ignore t :which-key "toggle")
+    "t d"   '("discord rich presence" . elcord-mode)
+    "t n"   '("line numbers"          . display-line-numbers-mode)
+    ;; "t l"   '("lsp"                   . my/toggle-lsp-bridge)
+    "t w"   '("whitespace"            . whitespace-mode)
     )
+
+  (general-def
+    "M-<f4>" #'my/quit-emacs)
 
   (general-def
     :states 'normal
     :keymaps 'override
-    "K" #'my/show-documentation
+    "K"   #'my/show-documentation
+    "g d" #'my/go-to-def
     )
 
   (general-def

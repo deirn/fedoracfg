@@ -1,5 +1,6 @@
 *
 !.gitignore
 
+!bootstrap-elpaca.el
 !early-init.el
 !init*.el

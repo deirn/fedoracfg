@@ -1,6 +1,3 @@
-# -*- eval: (lsp); -*-
-# @fish-lsp-disable 2002
-
 set -gx FEDORACFG $HOME/Documents/github.com/deirn/fedoracfg
 
 # [ direnv ]
@@ -81,11 +78,6 @@ set -gx PNPM_HOME $HOME/.local/share/pnpm
 fish_add_path $PNPM_HOME
 # [ pnpm ]
 
-# [ protonge ]
-# https://github.com/augustobmoura/asdf-protonge
-set -gx ASDF_PROTONGE_STEAM_COMPAT_DIR "$HOME/.var/app/com.valvesoftware.Steam/data/Steam/compatibilitytools.d/"
-# [ protonge ]
-
 # [ abbreviations ]
 abbr -a ls lsd
 abbr -a ll lsd -lA
@@ -94,9 +86,6 @@ abbr -a enw emacs -nw
 abbr -a rm trash
 abbr -a rm! /usr/bin/rm
 abbr -a c clear
-
-alias protontricks="flatpak run com.github.Matoking.protontricks"
-alias protontricks-launch="flatpak run --command=protontricks-launch com.github.Matoking.protontricks"
 
 alias zen-browser="flatpak run app.zen_browser.zen"
 # [ abbreviations ]
