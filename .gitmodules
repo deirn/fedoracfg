@@ -1,12 +1,3 @@
-[submodule "config/emacs"]
-	path = config/emacs
-	url = https://github.com/doomemacs/doomemacs.git
-[submodule "share/powerlevel10k"]
-	path = share/powerlevel10k
-	url = https://github.com/romkatv/powerlevel10k.git
-[submodule "share/zsh-vi-mode"]
-	path = share/zsh-vi-mode
-	url = git@github.com:deirn/zsh-vi-mode.git
 [submodule "share/idea-doom-emacs"]
 	path = share/idea-doom-emacs
 	url = https://github.com/sei40kr/idea-doom-emacs.git
