@@ -31,7 +31,6 @@
   :ensure (:host github :repo "50ways2sayhard/dart-ts-mode")
   :after lsp-bridge
   :mode "\\.dart\\'"
-  :hook (dart-ts-mode . lsp-bridge-mode)
   :config
   (add-to-list 'treesit-language-source-alist '(dart . ("https://github.com/UserNobody14/tree-sitter-dart")))
   (add-to-list 'lsp-bridge-single-lang-server-mode-list '(dart-ts-mode . "dart-analysis-server")))
@@ -65,11 +64,15 @@
   (window-divider-default-bottom-width 5)
   (window-divider-default-right-width 5)
 
-  (indent-tabs-mode nil)
+  (tab-always-indent 'complete)
   (tab-width 4)
   (standard-indent 4)
-
-  (line-spacing 0.03)
+  (whitespace-style '(face tabs tab-mark
+                           spaces space-mark
+                           indentation
+                           space-after-tab space-before-tab
+                           trailing
+                           missing-newline-at-eof))
 
   ;; disable backup `.#' and lockfiles `~'
   (create-lockfiles nil)
@@ -92,6 +95,8 @@
                       :height 105)
 
   (fset #'yes-or-no-p #'y-or-n-p)
+  (setq-default indent-tabs-mode nil)
+
   :hook
   (prog-mode . display-line-numbers-mode)
   (conf-mode . display-line-numbers-mode)
@@ -126,6 +131,16 @@
 
 (use-package hide-mode-line
   :commands (hide-mode-line-mode))
+
+(use-package highlight-indent-guides
+  :custom
+  (highlight-indent-guides-method 'character)
+  (highlight-indent-guides-auto-character-face-perc 40)
+  (highlight-indent-guides-responsive 'top)
+  (highlight-indent-guides-auto-top-character-face-perc 70)
+
+  :hook
+  (prog-mode . highlight-indent-guides-mode))
 
 (use-package projectile
   :init
@@ -194,6 +209,13 @@
 
 (use-package magit
   :commands (magit-status))
+
+(use-package git-modes
+  :mode
+  (("\\.gitignore\\'"     . gitignore-mode)
+   ("\\.gitconfig\\'"     . gitconfig-mode)
+   ("\\.gitmodules\\'"    . gitconfig-mode)
+   ("\\.gitattributes\\'" . gitattributes-mode)))
 
 (use-package helpful
   :commands (helpful-at-point))
@@ -334,6 +356,8 @@
   (lsp-bridge-code-action-preview-delay nil)
   (lsp-bridge-code-action-enable-popup-menu nil)
 
+  (lsp-bridge-enable-mode-line nil)
+
   (lsp-bridge-enable-completion-in-minibuffer t)
   (lsp-bridge-enable-completion-in-string t)
 
@@ -342,8 +366,9 @@
   (acm-enable-tabnine nil)
   (acm-candidate-match-function #'orderless-flex)
 
-  :config
-  (global-lsp-bridge-mode))
+  :hook
+  (prog-mode . lsp-bridge-mode)
+  (conf-mode . lsp-bridge-mode))
 
 (use-package flymake-bridge
   :after flymake
@@ -408,8 +433,11 @@
   (let* ((current (current-buffer))
          (target-name '("*dashboard*"
                         "*Help*"
-                        "*Ibuffer*"))
-         (target-mode '("Helpful"))
+                        "*Ibuffer*"
+                        "*lsp-bridge-doc*"))
+         (target-mode '("Helpful"
+                        "Magit"
+                        "Magit Process"))
          (killed-count 0))
     (dolist (buf (buffer-list))
       (unless (eq buf current)
@@ -511,8 +539,9 @@
 
     "t"     '(:ignore t :which-key "toggle")
     "t d"   '("discord rich presence" . elcord-mode)
-    "t n"   '("line numbers"          . display-line-numbers-mode)
+    "t i"   '("indent"                . highlight-indent-guides-mode)
     ;; "t l"   '("lsp"                   . my/toggle-lsp-bridge)
+    "t n"   '("line numbers"          . display-line-numbers-mode)
     "t w"   '("whitespace"            . whitespace-mode)
     )
 

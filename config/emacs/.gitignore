@@ -4,3 +4,6 @@
 !bootstrap-elpaca.el
 !early-init.el
 !init*.el
+
+!snippets/
+!snippets/**

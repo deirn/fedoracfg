@@ -1,0 +1,12 @@
+# -*- mode: snippet; -*-
+# name: save sudo for the whole script
+# key: sudosave
+# --
+sudo -v
+( while true; do sudo -n true; sleep 60; done ) &
+SUDO_PID=$!
+
+cleanup() {
+	kill "$SUDO_PID"
+}
+trap cleanup EXIT
