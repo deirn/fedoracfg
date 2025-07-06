@@ -1,4 +1,4 @@
-;;; init.el -*- lexical-binding: t; -*-
+;;; init.el --- -*- lexical-binding: t; -*-
 
 (when (version< emacs-version "30") (error "This requires Emacs 30 and above!"))
 
@@ -436,6 +436,7 @@
                         "*Ibuffer*"
                         "*lsp-bridge-doc*"))
          (target-mode '("Helpful"
+                        "Custom"
                         "Magit"
                         "Magit Process"))
          (killed-count 0))
@@ -553,6 +554,8 @@
     :keymaps 'override
     "K"   #'my/show-documentation
     "g d" #'my/go-to-def
+    "] e" #'flymake-goto-next-error
+    "[ e" #'flymake-goto-prev-error
     )
 
   (general-def
