@@ -91,7 +91,7 @@
 
   :config
   (set-face-attribute 'default nil
-                      :family "JetBrains Mono"
+                      :family "JetBrainsMono NF"
                       :height 105)
 
   (fset #'yes-or-no-p #'y-or-n-p)
@@ -182,6 +182,7 @@
            (lambda ()
              (when (get-buffer "*dashboard*")
                (my/dashboard-refresh)))))))
+
 (use-package dirvish
   :custom
   (delete-by-moving-to-trash t)
@@ -219,6 +220,9 @@
 
 (use-package helpful
   :commands (helpful-at-point))
+
+(use-package vterm
+  :commands (vterm vterm-other-window))
 
 ;; discord rich presence
 (use-package elcord
@@ -368,7 +372,8 @@
 
   :hook
   (prog-mode . lsp-bridge-mode)
-  (conf-mode . lsp-bridge-mode))
+  (conf-mode . lsp-bridge-mode)
+  (lsp-bridge-mode . flymake-bridge-setup))
 
 (use-package flymake-bridge
   :after flymake
@@ -520,6 +525,8 @@
     "o o"   '("dired"                 . dired)
     "o p"   '("project view"          . dirvish-side)
     "o s"   '("scratch"               . scratch-buffer)
+    "o t"   '("terminal"              . vterm-other-window)
+    "o T"   '("terminal here"         . vterm)
 
     "p"     '(:ignore t :which-key "project")
     "p a"   '("switch project"        . projectile-add-known-project)
