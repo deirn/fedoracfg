@@ -186,6 +186,7 @@
 (use-package dirvish
   :custom
   (delete-by-moving-to-trash t)
+  (dired-listing-switches "-alh --group-directories-first")
   (dirvish-subtree-state-style 'nerd)
   (dirvish-attributes '(nerd-icons vc-state file-size file-time))
   (dirvish-side-attributes '(nerd-icons collapse vc-state file-size))
