@@ -114,6 +114,8 @@
   (my/late . (lambda () (load-theme 'doom-one t))))
 
 (use-package doom-modeline
+  :custom
+  (doom-modeline-buffer-file-name-style 'relative-from-project)
   :hook
   (my/late . doom-modeline-mode))
 
@@ -209,6 +211,20 @@
   (dired-mode . diredfl-mode)
   (dirvish-directory-view-mode . diredfl-mode))
 
+(use-package ace-window
+  :commands (ace-window)
+  :custom
+  (aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l)))
+
+(use-package popwin
+  :custom
+  (popwin:popup-window-width 80)
+  :config
+  (add-to-list 'popwin:special-display-config '(helpful-mode :position right :stick t))
+  (add-to-list 'popwin:special-display-config '("*lsp-bridge-doc*" :position right :stick t))
+  :hook
+  (my/late . popwin-mode))
+
 (use-package magit
   :commands (magit-status))
 
@@ -278,17 +294,6 @@
   :hook
   (prog-mode . combobulate-mode))
 
-;; (use-package corfu
-;;   :custom
-;;   (corfu-cycle t)
-;;   (corfu-auto t)
-;;   (corfu-auto-delay 0.24)
-;;   (corfu-auto-prefix 2)
-;;   (corfu-quit-no-match 'separator)
-
-;;   :init
-;;   (global-corfu-mode 1))
-
 (use-package vertico
   :config
   (vertico-mode 1))
@@ -320,11 +325,6 @@
   :hook
   (completion-at-point-functions . cape-dabbrev)
   (completion-at-point-functions . cape-file))
-
-;; (use-package yasnippet-capf
-;;   :after (cape yasnippet)
-;;   :hook
-;;   (completion-at-point-functions . yasnippet-capf))
 
 (use-package flymake
   :hook
@@ -375,28 +375,11 @@
   (prog-mode . lsp-bridge-mode)
   (conf-mode . lsp-bridge-mode)
   (lsp-bridge-mode . flymake-bridge-setup))
+                                        ;(buffer-list-update-hook . my/setup-lsp-brige-doc-buffer))
 
 (use-package flymake-bridge
   :after flymake
   :ensure (:host github :repo "eki3z/flymake-bridge" :main nil))
-
-;; (defun my/toggle-lsp-bridge ()
-;;   "Toggle lsp-bridge to current buffer."
-;;   (interactive)
-;;   (if (bound-and-true-p lsp-bridge-mode)
-;;       (-my/disable-lsp-bridge)
-;;     (-my/enable-lsp-bridge)))
-
-;; (defun -my/enable-lsp-bridge ()
-;;   (lsp-bridge-mode 1)
-;;   (corfu-mode -1)
-;;   (flymake-bridge-setup)
-;;   (message "Enabled lsp-bridge, disabled corfu"))
-
-;; (defun -my/disable-lsp-bridge ()
-;;   (lsp-bridge-mode -1)
-;;   (corfu-mode 1)
-;;   (message "Enabled corfu, disabled lsp-bridge"))
 
 (defun my/has-lsp ()
   "Return whether the current buffer has LSP server."
@@ -413,6 +396,23 @@
     (progn
       (call-interactively #'apheleia-format-buffer)
       (message "Formatted using apheleia"))))
+
+(defvar my/lsp-bridge-doc-mode-map (make-sparse-keymap))
+(define-minor-mode my/lsp-bridge-doc-mode
+  "Minor mode for *lsp-bridge-doc* buffer.")
+
+(defun my/setup-lsp-bridge-doc-buffer ()
+  "Setup *lsp-bridge-doc* buffer."
+  (when-let ((buf (get-buffer "*lsp-bridge-doc*")))
+    (with-current-buffer buf
+      (unless my/lsp-bridge-doc-mode
+        (my/lsp-bridge-doc-mode 1))
+      (display-line-numbers-mode -1)
+      (general-define-key
+        :keymaps 'local
+        :states '(normal motion)
+        "q" #'quit-window))))
+(add-hook 'buffer-list-update-hook #'my/setup-lsp-bridge-doc-buffer)
 
 (defun my/show-documentation ()
   "Show documentation at point."
@@ -477,6 +477,37 @@
           (select-window (get-mru-window nil t t))
           (find-file file))))))
 
+(defun my/split-window-left ()
+  "Split window to the left, focus the left window."
+  (interactive)
+  (call-interactively #'split-window-horizontally))
+
+(defun my/split-window-right ()
+  "Split window to the right, focus the right window."
+  (interactive)
+  (call-interactively #'split-window-horizontally)
+  (call-interactively #'windmove-right))
+
+(defun my/split-window-up ()
+  "Split window to the up, focus the up window."
+  (interactive)
+  (call-interactively #'split-window-vertically))
+
+(defun my/split-window-down ()
+  "Split window to the down, focus the down window."
+  (interactive)
+  (call-interactively #'split-window-vertically)
+  (call-interactively #'windmove-down))
+
+(defun my/last-focused-window ()
+  "Go to the last focused window."
+  (interactive)
+  (let ((win (get-mru-window t t t)))
+    (unless win (error "Last window not found"))
+    (let ((frame (window-frame win)))
+      (select-frame-set-input-focus frame)
+      (select-window win))))
+
 (use-package general
   :config
   (global-unset-key (kbd "C-SPC"))
@@ -536,20 +567,20 @@
 
     "w"     '(:ignore t :which-key "window")
     "w h"   '("left"                  . evil-window-left)
+    "w H"   '("split left"            . my/split-window-left)
     "w j"   '("down"                  . evil-window-down)
+    "w J"   '("split down"            . my/split-window-down)
     "w k"   '("up"                    . evil-window-up)
+    "w K"   '("split up"              . my/split-window-up)
     "w l"   '("right"                 . evil-window-right)
+    "w L"   '("split right"           . my/split-window-right)
     "w m"   '("maximize"              . delete-other-windows)
     "w q"   '("kill window"           . delete-window)
-
-    "w s"   '(:ignore t :which-key "window split")
-    "w s h" '("horizontal"            . split-window-right)
-    "w s v" '("vertical"              . split-window-below)
+    "w w"   '("switch window"         . ace-window)
 
     "t"     '(:ignore t :which-key "toggle")
     "t d"   '("discord rich presence" . elcord-mode)
     "t i"   '("indent"                . highlight-indent-guides-mode)
-    ;; "t l"   '("lsp"                   . my/toggle-lsp-bridge)
     "t n"   '("line numbers"          . display-line-numbers-mode)
     "t w"   '("whitespace"            . whitespace-mode)
     )
@@ -576,6 +607,7 @@
   (general-def
     :keymaps 'dirvish-mode-map
     :states '(normal motion)
+    "q"   #'my/last-focused-window
     "TAB" #'dirvish-subtree-toggle
     "h"   #'dired-up-directory
     "l"   #'my/dirvish-open-file
