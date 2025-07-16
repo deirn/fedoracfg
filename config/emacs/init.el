@@ -220,8 +220,12 @@
   :custom
   (popwin:popup-window-width 80)
   :config
-  (add-to-list 'popwin:special-display-config '(helpful-mode :position right :stick t))
-  (add-to-list 'popwin:special-display-config '("*lsp-bridge-doc*" :position right :stick t))
+  (defun my/popwin (opt)
+    (add-to-list 'popwin:special-display-config opt))
+
+  (my/popwin '(helpful-mode :position right :stick t))
+  (my/popwin '("*lsp-bridge-doc*" :position right :stick t))
+  (my/popwin '(Man-mode :position right :stick t))
   :hook
   (my/late . popwin-mode))
 
