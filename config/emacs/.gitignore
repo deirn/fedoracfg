@@ -1,9 +1,9 @@
 *
 !.gitignore
 
-!bootstrap-elpaca.el
 !early-init.el
-!init*.el
+!elpaca-init.el
+!init.el
 
 !snippets/
 !snippets/**

@@ -2,7 +2,7 @@
 
 (when (version< emacs-version "30") (error "This requires Emacs 30 and above!"))
 
-(load (expand-file-name "bootstrap-elpaca" user-emacs-directory))
+(load (expand-file-name "elpaca-init" user-emacs-directory))
 
 (use-package gcmh
   :config
@@ -34,6 +34,18 @@
   :config
   (add-to-list 'treesit-language-source-alist '(dart . ("https://github.com/UserNobody14/tree-sitter-dart")))
   (add-to-list 'lsp-bridge-single-lang-server-mode-list '(dart-ts-mode . "dart-analysis-server")))
+
+;; FIXME: https://github.com/leafOfTree/svelte-ts-mode/pull/10
+(use-package svelte-ts-mode
+  :ensure (:host github :repo "shfx/svelte-ts-mode" :ref "e75753350d56fc8d066d43cc704322ec98dbb087")
+  :after lsp-bridge
+  :mode "\\.svelte\\'"
+  :config
+  (dolist (e svelte-ts-mode-language-source-alist)
+    (add-to-list 'treesit-language-source-alist e))
+  (add-to-list 'lsp-bridge-single-lang-server-mode-list '(svelte-ts-mode . "svelteserver")))
+
+(use-package nix-ts-mode :mode "\\.nix\\'")
 
 (use-package nerd-icons :defer t)
 (use-package transient :defer t)
@@ -116,6 +128,7 @@
 (use-package doom-modeline
   :custom
   (doom-modeline-buffer-file-name-style 'relative-from-project)
+  (doom-modeline-buffer-encoding 'nondefault)
   :hook
   (my/late . doom-modeline-mode))
 
@@ -137,9 +150,7 @@
 (use-package highlight-indent-guides
   :custom
   (highlight-indent-guides-method 'character)
-  (highlight-indent-guides-auto-character-face-perc 40)
   (highlight-indent-guides-responsive 'top)
-  (highlight-indent-guides-auto-top-character-face-perc 70)
 
   :hook
   (prog-mode . highlight-indent-guides-mode))
@@ -226,6 +237,7 @@
   (my/popwin '(helpful-mode :position right :stick t))
   (my/popwin '("*lsp-bridge-doc*" :position right :stick t))
   (my/popwin '(Man-mode :position right :stick t))
+  (my/popwin '(flymake-diagnostics-buffer-mode :position bottom :stick t))
   :hook
   (my/late . popwin-mode))
 
@@ -334,6 +346,17 @@
   :hook
   (prog-mode . flymake-mode))
 
+(use-package hl-todo
+  :after (flymake)
+  :custom
+  (hl-todo-highlight-punctuation ":")
+  (hl-todo-keyword-faces '(("TODO" warning bold)
+                           ("FIXME" error bold)))
+  :config
+  (add-hook 'flymake-diagnostic-functions #'hl-todo-flymake)
+  :hook
+  (my/late . global-hl-todo-mode))
+
 (use-package dape
   :after projectile
   :commands (dape)
@@ -379,7 +402,6 @@
   (prog-mode . lsp-bridge-mode)
   (conf-mode . lsp-bridge-mode)
   (lsp-bridge-mode . flymake-bridge-setup))
-                                        ;(buffer-list-update-hook . my/setup-lsp-brige-doc-buffer))
 
 (use-package flymake-bridge
   :after flymake
@@ -413,9 +435,9 @@
         (my/lsp-bridge-doc-mode 1))
       (display-line-numbers-mode -1)
       (general-define-key
-        :keymaps 'local
-        :states '(normal motion)
-        "q" #'quit-window))))
+       :keymaps 'local
+       :states '(normal motion)
+       "q" #'quit-window))))
 (add-hook 'buffer-list-update-hook #'my/setup-lsp-bridge-doc-buffer)
 
 (defun my/show-documentation ()

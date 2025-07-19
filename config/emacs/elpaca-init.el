@@ -1,4 +1,4 @@
-;;; bootstrap-elpaca.el --- -*- lexical-binding: t; -*-
+;;; elpaca-init.el --- -*- lexical-binding: t; -*-
 
 (defvar elpaca-installer-version 0.11)
 (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
@@ -47,4 +47,4 @@
 ;; :ensure by default
 (setq use-package-always-ensure t)
 
-;;; bootstrap-elpaca.el ends here
+;;; elpaca-init.el ends here
