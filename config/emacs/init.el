@@ -21,6 +21,10 @@
 (use-package markdown-mode :mode "\\.md\\'")
 (use-package fish-mode     :mode "\\.fish\\'")
 
+(use-package js
+  :ensure nil
+  :mode ("\\.[mc]?js\\'" . js-ts-mode))
+
 (use-package systemd
   :ensure (:files ("*.el" "*directives.txt"))
   :mode ("\\.service\\'" . systemd-mode)
