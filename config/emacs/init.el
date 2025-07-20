@@ -107,6 +107,8 @@
   (fset #'yes-or-no-p #'y-or-n-p)
   (setq-default indent-tabs-mode nil)
 
+  (desktop-save-mode)
+
   :hook
   (prog-mode . display-line-numbers-mode)
   (conf-mode . display-line-numbers-mode)
@@ -167,8 +169,7 @@
   (dashboard-set-heading-icons t)
   (dashboard-set-file-icons t)
   (dashboard-projects-backend 'projectile)
-  (dashboard-items '((recents  . 5)
-                     (projects . 5)))
+  (dashboard-items '((recents  . 10)))
   (initial-buffer-choice 'dashboard-open)
 
   :hook
@@ -341,6 +342,7 @@
   (completion-at-point-functions . cape-file))
 
 (use-package flymake
+  :ensure nil
   :hook
   (prog-mode . flymake-mode))
 
@@ -352,7 +354,6 @@
 ;;   (flyover-checkers '(flymake)))
 
 (use-package hl-todo
-  :after (flymake)
   :custom
   (hl-todo-highlight-punctuation ":")
   (hl-todo-keyword-faces '(("TODO" warning bold)
@@ -378,7 +379,7 @@
   (dape-breakpoint-global-mode 1))
 
 (use-package lsp-bridge
-  :after (evil yasnippet markdown-mode orderless)
+  :after (yasnippet markdown-mode orderless)
   :ensure (:host github :repo "manateelazycat/lsp-bridge"
                  :files (:defaults "*.el" "*.py" "acm" "core" "langserver" "multiserver" "resources")
                  :build (:not elpaca--byte-compile))
@@ -394,6 +395,7 @@
   (lsp-bridge-code-action-preview-delay nil)
   (lsp-bridge-code-action-enable-popup-menu nil)
 
+  ;; manually enabled below
   (lsp-bridge-enable-mode-line nil)
 
   (lsp-bridge-enable-completion-in-minibuffer t)
@@ -406,6 +408,14 @@
 
   :config
   (evil-set-initial-state 'lsp-bridge-ref-mode 'insert)
+
+  ;; enable mode line manually, with rocket icon and without extra space suffix
+  (defun my/lsp-bridge-rocket-mode-line (ret)
+    "Replace `lsp-bridge' mode line string with rocket icon."
+    (when ret
+      (propertize (nerd-icons-mdicon "nf-md-rocket") 'face (get-text-property 0 'face ret))))
+  (advice-add 'lsp-bridge--mode-line-format :filter-return #'my/lsp-bridge-rocket-mode-line)
+  (add-to-list 'mode-line-misc-info `(lsp-bridge-mode ("" lsp-bridge--mode-line-format)))
 
   :hook
   (prog-mode . lsp-bridge-mode)
