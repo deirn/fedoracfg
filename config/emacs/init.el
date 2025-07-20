@@ -35,11 +35,9 @@
   (add-to-list 'treesit-language-source-alist '(dart . ("https://github.com/UserNobody14/tree-sitter-dart")))
   (add-to-list 'lsp-bridge-single-lang-server-mode-list '(dart-ts-mode . "dart-analysis-server")))
 
-;; FIXME: https://github.com/leafOfTree/svelte-ts-mode/pull/10
 (use-package svelte-ts-mode
-  :ensure (:host github :repo "shfx/svelte-ts-mode" :ref "e75753350d56fc8d066d43cc704322ec98dbb087")
+  :ensure (:host github :repo "leafOfTree/svelte-ts-mode")
   :after lsp-bridge
-  :mode "\\.svelte\\'"
   :config
   (dolist (e svelte-ts-mode-language-source-alist)
     (add-to-list 'treesit-language-source-alist e))
@@ -147,13 +145,13 @@
 (use-package hide-mode-line
   :commands (hide-mode-line-mode))
 
-(use-package highlight-indent-guides
-  :custom
-  (highlight-indent-guides-method 'character)
-  (highlight-indent-guides-responsive 'top)
+;; (use-package highlight-indent-guides
+;;   :custom
+;;   (highlight-indent-guides-method 'character)
+;;   (highlight-indent-guides-responsive 'top)
 
-  :hook
-  (prog-mode . highlight-indent-guides-mode))
+;;   :hook
+;;   (prog-mode . highlight-indent-guides-mode))
 
 (use-package projectile
   :init
@@ -346,6 +344,13 @@
   :hook
   (prog-mode . flymake-mode))
 
+;; FIXME: https://github.com/konrad1977/flyover/issues/17
+;; (use-package flyover
+;;   :after (flymake)
+;;   :ensure (:host github :repo "konrad1977/flyover")
+;;   :custom
+;;   (flyover-checkers '(flymake)))
+
 (use-package hl-todo
   :after (flymake)
   :custom
@@ -372,10 +377,11 @@
   :config
   (dape-breakpoint-global-mode 1))
 
-(add-to-list 'load-path (expand-file-name "share/lsp-bridge" (getenv "FEDORACFG")))
 (use-package lsp-bridge
-  :after (yasnippet markdown-mode orderless)
-  :ensure nil
+  :after (evil yasnippet markdown-mode orderless)
+  :ensure (:host github :repo "manateelazycat/lsp-bridge"
+                 :files (:defaults "*.el" "*.py" "acm" "core" "langserver" "multiserver" "resources")
+                 :build (:not elpaca--byte-compile))
   :custom
   ;; use uv, so it has consistent package version
   (lsp-bridge-python-command "uv")
@@ -397,6 +403,9 @@
   (acm-enable-icon t)
   (acm-enable-tabnine nil)
   (acm-candidate-match-function #'orderless-flex)
+
+  :config
+  (evil-set-initial-state 'lsp-bridge-ref-mode 'insert)
 
   :hook
   (prog-mode . lsp-bridge-mode)
@@ -453,6 +462,13 @@
   (if (my/has-lsp)
       (call-interactively #'lsp-bridge-find-def)
     (call-interactively #'evil-goto-definition)))
+
+(defun my/go-to-ref ()
+  "Show references at point."
+  (interactive)
+  (if (my/has-lsp)
+      (call-interactively #'lsp-bridge-find-references)
+    (call-interactively #'xref-find-references)))
 
 (defun my/open-config ()
   "Open Emacs configuration."
@@ -572,6 +588,7 @@
     "c"     '(:ignore t :which-key "code")
     "c a"   '("action"                . lsp-bridge-code-action)
     "c d"   '("definition"            . my/go-to-def)
+    "c D"   '("definition"            . my/go-to-ref)
     "c e"   '("errors"                . flymake-show-buffer-diagnostics)
     "c E"   '("project errors"        . flymake-show-project-diagnostics)
     "c f"   '("format"                . my/format-buffer)
@@ -606,7 +623,7 @@
 
     "t"     '(:ignore t :which-key "toggle")
     "t d"   '("discord rich presence" . elcord-mode)
-    "t i"   '("indent"                . highlight-indent-guides-mode)
+    ;; "t i"   '("indent"                . highlight-indent-guides-mode)
     "t n"   '("line numbers"          . display-line-numbers-mode)
     "t w"   '("whitespace"            . whitespace-mode)
     )
@@ -619,6 +636,7 @@
     :keymaps 'override
     "K"   #'my/show-documentation
     "g d" #'my/go-to-def
+    "g r" #'my/go-to-ref
     "] e" #'flymake-goto-next-error
     "[ e" #'flymake-goto-prev-error
     )
