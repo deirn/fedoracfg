@@ -283,6 +283,7 @@
   (dirvish-attributes '(nerd-icons vc-state file-size file-time))
   (dirvish-side-attributes '(nerd-icons collapse vc-state file-size))
   (dirvish-hide-details '(dirvish-side))
+  (dirvish-mode-line-height 24)
 
   :init
   (dirvish-override-dired-mode)
@@ -392,7 +393,6 @@
 (use-package vertico
   :config
   (vertico-mode 1))
-
 
 (use-package marginalia
   :after vertico
