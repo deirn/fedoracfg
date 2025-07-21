@@ -4,6 +4,10 @@
 
 (load (expand-file-name "elpaca-init" user-emacs-directory))
 
+(use-package benchmark-init
+  :config
+  (add-hook 'after-init-hook 'benchmark-init/deactivate))
+
 (use-package gcmh
   :config
   (gcmh-mode 1))
@@ -95,7 +99,7 @@
   (which-key-sort-order 'which-key-key-order-alpha)
   (which-key-sort-uppercase-first nil)
   (which-key-dont-use-unicode nil)
-  (which-key-add-column-padding 2)
+  (which-key-min-display-lines 10)
 
   (history-length 1000)
   (savehist-autosave-interval 60)
@@ -111,7 +115,43 @@
   (fset #'yes-or-no-p #'y-or-n-p)
   (setq-default indent-tabs-mode nil)
 
-  (desktop-save-mode)
+  ;; Custom functions/hooks for persisting/loading frame geometry upon save/load
+  ;; https://www.reddit.com/r/emacs/comments/4ermj9/comment/d237n0i
+  (defun my/save-frameg ()
+    "Gets the current frame's geometry and saves to `frameg.el'."
+    (let ((frameg-left (frame-parameter (selected-frame) 'left))
+          (frameg-top (frame-parameter (selected-frame) 'top))
+          (frameg-width (frame-parameter (selected-frame) 'width))
+          (frameg-height (frame-parameter (selected-frame) 'height))
+          (frameg-fullscreen (frame-parameter (selected-frame) 'fullscreen))
+          (frameg-file (expand-file-name "frameg.el" user-emacs-directory)))
+      (with-temp-buffer
+        ;; Turn off backup for this file
+        (make-local-variable 'make-backup-files)
+        (setq make-backup-files nil)
+        (insert
+         ";;; This file stores the previous emacs frame's geometry. -*- lexical-binding: t; -*-\n"
+         ";;; Last generated " (current-time-string) ".\n"
+         "(setq initial-frame-alist\n"
+         " '("
+         (format " (top . %d)\n" (max frameg-top 0))
+         (format " (left . %d)\n" (max frameg-left 0))
+         (format " (width . %d)\n" (max frameg-width 0))
+         (format " (height . %d)\n" (max frameg-height 0))
+         (format " (fullscreen . %s)))\n" frameg-fullscreen))
+        (when (file-writable-p frameg-file)
+          (write-file frameg-file)))))
+
+  (defun my/load-frameg ()
+    "Loads `frameg.el' which should load the previous frame's geometry."
+    (let ((frameg-file (expand-file-name "frameg.el" user-emacs-directory)))
+      (when (file-readable-p frameg-file)
+        (load-file frameg-file))))
+
+  ;; Special work to do ONLY when there is a window system being used
+  (when window-system
+    (add-hook 'after-init-hook 'my/load-frameg)
+    (add-hook 'kill-emacs-hook 'my/save-frameg))
 
   :hook
   (prog-mode . display-line-numbers-mode)
@@ -144,6 +184,41 @@
   :hook
   (my/late . global-vi-tilde-fringe-mode))
 
+(use-package posframe
+  :config
+  (defun my/disable-solaire-in-posframe (buffer &rest _)
+    (with-current-buffer buffer (turn-off-solaire-mode)))
+  (advice-add 'posframe-show :after #'my/disable-solaire-in-posframe))
+
+(use-package which-key-posframe
+  :custom
+  (which-key-posframe-border-width 10)
+  :config
+  (set-face-background 'which-key-posframe "#1c1e24")
+  (set-face-background 'which-key-posframe-border "#1c1e24")
+  :hook
+  (my/late . which-key-posframe-mode))
+
+(use-package vertico-posframe
+  :after vertico
+  :custom
+  (vertico-posframe-border-width 10)
+  :config
+  (set-face-background 'vertico-posframe "#1c1e24")
+  (advice-add 'vertico-posframe--get-border-color :override
+              (lambda () "" "#1c1e24"))
+  :hook
+  (my/late . vertico-posframe-mode))
+
+(use-package transient-posframe
+  :custom
+  (transient-posframe-border-width 10)
+  :config
+  (set-face-background 'transient-posframe "#1c1e24")
+  (set-face-background 'transient-posframe-border "#1c1e24")
+  :hook
+  (my/late . transient-posframe-mode))
+
 (use-package rainbow-delimiters
   :hook
   (prog-mode . rainbow-delimiters-mode))
@@ -173,7 +248,8 @@
   (dashboard-set-heading-icons t)
   (dashboard-set-file-icons t)
   (dashboard-projects-backend 'projectile)
-  (dashboard-items '((recents  . 10)))
+  (dashboard-items '((recents  . 10)
+                     (projects . 10)))
   (initial-buffer-choice 'dashboard-open)
 
   :hook
@@ -317,6 +393,7 @@
   :config
   (vertico-mode 1))
 
+
 (use-package marginalia
   :after vertico
   :config
@@ -419,11 +496,14 @@
     (when ret
       (propertize (nerd-icons-mdicon "nf-md-rocket") 'face (get-text-property 0 'face ret))))
   (advice-add 'lsp-bridge--mode-line-format :filter-return #'my/lsp-bridge-rocket-mode-line)
-  (add-to-list 'mode-line-misc-info `(lsp-bridge-mode ("" lsp-bridge--mode-line-format)))
+
+  (defun my/setup-lsp-bridge-mode-line ()
+    (add-to-list 'mode-line-misc-info `(lsp-bridge-mode ("" lsp-bridge--mode-line-format))))
 
   :hook
   (prog-mode . lsp-bridge-mode)
   (conf-mode . lsp-bridge-mode)
+  (lsp-bridge-mode . my/setup-lsp-bridge-mode-line)
   (lsp-bridge-mode . flymake-bridge-setup))
 
 (use-package flymake-bridge
@@ -521,10 +601,14 @@
   (load-file (expand-file-name "init.el" user-emacs-directory))
   (message "init.el reloaded!"))
 
+(defun my/is-dirvish-side (&optional window)
+  "Returns t if WINDOW is `dirvish-side'."
+  (window-parameter window 'my/dirvish-side))
+
 (defun my/dirvish-open-file ()
   "Open file in main window, or open directory in current window."
   (interactive)
-  (if (not (window-parameter nil 'my/dirvish-side))
+  (if (not (my/is-dirvish-side))
       (call-interactively #'dired-find-alternate-file)
     (let ((file (dired-get-file-for-visit)))
       (if (file-directory-p file)
@@ -563,6 +647,20 @@
     (let ((frame (window-frame win)))
       (select-frame-set-input-focus frame)
       (select-window win))))
+
+(defun my/window-increase-width ()
+  "Increase window width."
+  (interactive)
+  (if (my/is-dirvish-side)
+      (call-interactively #'dirvish-side-increase-width)
+    (call-interactively #'evil-window-increase-width)))
+
+(defun my/window-decrease-width ()
+  "Decrease window width."
+  (interactive)
+  (if (my/is-dirvish-side)
+      (call-interactively #'dirvish-side-decrease-width)
+    (call-interactively #'evil-window-decrease-width)))
 
 (use-package general
   :config
@@ -634,6 +732,10 @@
     "w m"   '("maximize"              . delete-other-windows)
     "w q"   '("kill window"           . delete-window)
     "w w"   '("switch window"         . ace-window)
+    "w ="   '("increase width"        . my/window-increase-width)
+    "w -"   '("decrease width"        . my/window-decrease-width)
+    "w +"   '("increase height"       . my/window-increase-height)
+    "w _"   '("decrease height"       . my/window-decrease-height)
 
     "t"     '(:ignore t :which-key "toggle")
     "t d"   '("discord rich presence" . elcord-mode)
