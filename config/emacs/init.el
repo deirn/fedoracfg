@@ -54,7 +54,6 @@
 (use-package nix-ts-mode :mode "\\.nix\\'")
 
 (use-package nerd-icons :defer t)
-(use-package transient :defer t)
 (use-package apheleia :defer t)
 
 (use-package emacs
@@ -99,7 +98,7 @@
   (which-key-sort-order 'which-key-key-order-alpha)
   (which-key-sort-uppercase-first nil)
   (which-key-dont-use-unicode nil)
-  (which-key-min-display-lines 10)
+  (which-key-min-display-lines 5)
 
   (history-length 1000)
   (savehist-autosave-interval 60)
@@ -107,10 +106,12 @@
                                    regexp-search-ring
                                    extended-command-history))
 
+  (read-extended-command-predicate #'command-completion-default-include-p)
   :config
   (set-face-attribute 'default nil
                       :family "JetBrainsMono NF"
                       :height 105)
+  (set-face-attribute 'fixed-pitch nil :family "JetBrainsMono NF")
 
   (fset #'yes-or-no-p #'y-or-n-p)
   (setq-default indent-tabs-mode nil)
@@ -176,6 +177,9 @@
   :hook
   (my/late . doom-modeline-mode))
 
+(use-package hide-mode-line
+  :commands (hide-mode-line-mode))
+
 (use-package solaire-mode
   :hook
   (my/late . solaire-global-mode))
@@ -184,47 +188,58 @@
   :hook
   (my/late . global-vi-tilde-fringe-mode))
 
-(use-package posframe
-  :config
-  (defun my/disable-solaire-in-posframe (buffer &rest _)
-    (with-current-buffer buffer (turn-off-solaire-mode)))
-  (advice-add 'posframe-show :after #'my/disable-solaire-in-posframe))
+(use-package transient
+  :custom
+  (transient-mode-line-format nil))
+
+(setq my/posframe-y-offset 100
+      my/posframe-border-color "#bbc2cf"
+      my/posframe-params '((left-fringe 10)
+                           (right-fringe 10)))
+
+(defun my/posframe-poshandler (info)
+  "Custom poshandler, INFO."
+  (let ((top-center (posframe-poshandler-frame-top-center info)))
+    (cons (car top-center) my/posframe-y-offset)))
 
 (use-package which-key-posframe
   :custom
-  (which-key-posframe-border-width 10)
+  (which-key-posframe-poshandler #'my/posframe-poshandler)
+  (which-key-posframe-parameters my/posframe-params)
   :config
-  (set-face-background 'which-key-posframe "#1c1e24")
-  (set-face-background 'which-key-posframe-border "#1c1e24")
+  (set-face-background 'which-key-posframe-border my/posframe-border-color)
   :hook
   (my/late . which-key-posframe-mode))
 
-(use-package vertico-posframe
-  :after vertico
-  :custom
-  (vertico-posframe-border-width 10)
-  :config
-  (set-face-background 'vertico-posframe "#1c1e24")
-  (advice-add 'vertico-posframe--get-border-color :override
-              (lambda () "" "#1c1e24"))
-  :hook
-  (my/late . vertico-posframe-mode))
 
 (use-package transient-posframe
   :custom
-  (transient-posframe-border-width 10)
+  (transient-posframe-poshandler #'my/posframe-poshandler)
+  (transient-posframe-parameters my/posframe-params)
   :config
-  (set-face-background 'transient-posframe "#1c1e24")
-  (set-face-background 'transient-posframe-border "#1c1e24")
+  (set-face-background 'transient-posframe-border my/posframe-border-color)
   :hook
   (my/late . transient-posframe-mode))
+
+(use-package mini-frame
+  :custom
+  (mini-frame-detach-on-hide nil)
+  (mini-frame-show-parameters `((left . 0.5)
+                                (top . ,my/posframe-y-offset)
+                                (width . 0.6)
+                                (no-accept-focus . t)
+                                (child-frame-border-width . 1)
+                                (background-color . "#21242b")))
+  :config
+  (add-to-list 'mini-frame-advice-functions 'map-y-or-n-p)
+  (add-to-list 'mini-frame-ignore-commands 'evil-ex)
+  (set-face-background 'child-frame-border my/posframe-border-color)
+  :hook
+  (my/late . mini-frame-mode))
 
 (use-package rainbow-delimiters
   :hook
   (prog-mode . rainbow-delimiters-mode))
-
-(use-package hide-mode-line
-  :commands (hide-mode-line-mode))
 
 ;; (use-package highlight-indent-guides
 ;;   :custom
@@ -314,6 +329,7 @@
   (defun my/popwin (opt)
     (add-to-list 'popwin:special-display-config opt))
 
+  (my/popwin '(help-mode :position right :stick t))
   (my/popwin '(helpful-mode :position right :stick t))
   (my/popwin '("*lsp-bridge-doc*" :position right :stick t))
   (my/popwin '(Man-mode :position right :stick t))
@@ -459,6 +475,10 @@
   :config
   (dape-breakpoint-global-mode 1))
 
+(use-package corfu
+  :hook
+  (my/late . global-corfu-mode))
+
 (use-package lsp-bridge
   :after (yasnippet markdown-mode orderless)
   :ensure (:host github :repo "manateelazycat/lsp-bridge"
@@ -479,7 +499,7 @@
   ;; manually enabled below
   (lsp-bridge-enable-mode-line nil)
 
-  (lsp-bridge-enable-completion-in-minibuffer t)
+  ;; (lsp-bridge-enable-completion-in-minibuffer t)
   (lsp-bridge-enable-completion-in-string t)
 
   (acm-enable-capf t)
@@ -496,14 +516,33 @@
     (when ret
       (propertize (nerd-icons-mdicon "nf-md-rocket") 'face (get-text-property 0 'face ret))))
   (advice-add 'lsp-bridge--mode-line-format :filter-return #'my/lsp-bridge-rocket-mode-line)
+  (add-to-list 'mode-line-misc-info `(lsp-bridge-mode ("" lsp-bridge--mode-line-format)))
 
-  (defun my/setup-lsp-bridge-mode-line ()
-    (add-to-list 'mode-line-misc-info `(lsp-bridge-mode ("" lsp-bridge--mode-line-format))))
+  ;; enable corfu when lsp-bridge is off and vice versa
+  (advice-add 'lsp-bridge--enable :after (lambda () (corfu-mode -1)))
+  (advice-add 'lsp-bridge--disable :after (lambda () (corfu-mode 1)))
+
+  (defvar my/lsp-bridge-doc-mode-map (make-sparse-keymap))
+  (define-minor-mode my/lsp-bridge-doc-mode
+    "Minor mode for *lsp-bridge-doc* buffer.")
+
+  (defun my/setup-lsp-bridge-doc-buffer ()
+    "Setup *lsp-bridge-doc* buffer."
+    (when-let ((buf (get-buffer "*lsp-bridge-doc*")))
+      (with-current-buffer buf
+        (unless my/lsp-bridge-doc-mode
+          (my/lsp-bridge-doc-mode 1))
+        (display-line-numbers-mode -1)
+        (general-define-key
+         :keymaps 'local
+         :states '(normal motion)
+         "q" #'quit-window))))
+  (add-hook 'buffer-list-update-hook #'my/setup-lsp-bridge-doc-buffer)
 
   :hook
   (prog-mode . lsp-bridge-mode)
   (conf-mode . lsp-bridge-mode)
-  (lsp-bridge-mode . my/setup-lsp-bridge-mode-line)
+  (text-mode . lsp-bridge-mode)
   (lsp-bridge-mode . flymake-bridge-setup))
 
 (use-package flymake-bridge
@@ -525,23 +564,6 @@
     (progn
       (call-interactively #'apheleia-format-buffer)
       (message "Formatted using apheleia"))))
-
-(defvar my/lsp-bridge-doc-mode-map (make-sparse-keymap))
-(define-minor-mode my/lsp-bridge-doc-mode
-  "Minor mode for *lsp-bridge-doc* buffer.")
-
-(defun my/setup-lsp-bridge-doc-buffer ()
-  "Setup *lsp-bridge-doc* buffer."
-  (when-let ((buf (get-buffer "*lsp-bridge-doc*")))
-    (with-current-buffer buf
-      (unless my/lsp-bridge-doc-mode
-        (my/lsp-bridge-doc-mode 1))
-      (display-line-numbers-mode -1)
-      (general-define-key
-       :keymaps 'local
-       :states '(normal motion)
-       "q" #'quit-window))))
-(add-hook 'buffer-list-update-hook #'my/setup-lsp-bridge-doc-buffer)
 
 (defun my/show-documentation ()
   "Show documentation at point."
@@ -740,6 +762,7 @@
     "t"     '(:ignore t :which-key "toggle")
     "t d"   '("discord rich presence" . elcord-mode)
     ;; "t i"   '("indent"                . highlight-indent-guides-mode)
+    "t l"   '("lsp"                   . lsp-bridge-mode)
     "t n"   '("line numbers"          . display-line-numbers-mode)
     "t w"   '("whitespace"            . whitespace-mode)
     )
