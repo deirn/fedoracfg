@@ -2,7 +2,11 @@
 
 (when (version< emacs-version "30") (error "This requires Emacs 30 and above!"))
 
-(load (expand-file-name "elpaca-init" user-emacs-directory))
+(defun my/load (file)
+  "Load a FILE."
+  (load (expand-file-name file user-emacs-directory) t))
+
+(my/load "elpaca-init")
 
 (use-package benchmark-init
   :config
@@ -30,7 +34,7 @@
   :mode ("\\.[mc]?js\\'" . js-ts-mode))
 
 (use-package systemd
-  :ensure (:files ("*.el" "*directives.txt"))
+  :ensure (:files (:defaults "*directives.txt"))
   :mode ("\\.service\\'" . systemd-mode)
   :init
   (add-hook 'systemd-mode-hook #'display-line-numbers-mode))
@@ -52,6 +56,10 @@
   (add-to-list 'lsp-bridge-single-lang-server-mode-list '(svelte-ts-mode . "svelteserver")))
 
 (use-package nix-ts-mode :mode "\\.nix\\'")
+
+(use-package beancount
+  :ensure (:host github :repo "beancount/beancount-mode")
+  :mode ("\\.beancount\\'" . beancount-mode))
 
 (use-package nerd-icons :defer t)
 (use-package apheleia :defer t)
@@ -322,20 +330,19 @@
   :custom
   (aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l)))
 
-(use-package popwin
+(use-package shackle
   :custom
-  (popwin:popup-window-width 80)
-  :config
-  (defun my/popwin (opt)
-    (add-to-list 'popwin:special-display-config opt))
+  (shackle-default-size 0.25)
+  (shackle-rules '((help-mode :select t :popup t :align right)
+                   (helpful-mode :select t :popup t :align right)
+                   ("*lsp-bridge-doc*" :select t :popup t :align right)
+                   (Man-mode :select t :popup t :align right)
+                   (vterm-mode :select t :popup t :align right)
 
-  (my/popwin '(help-mode :position right :stick t))
-  (my/popwin '(helpful-mode :position right :stick t))
-  (my/popwin '("*lsp-bridge-doc*" :position right :stick t))
-  (my/popwin '(Man-mode :position right :stick t))
-  (my/popwin '(flymake-diagnostics-buffer-mode :position bottom :stick t))
+                   (flymake-diagnostics-buffer-mode :select t :popup t :align bottom)
+                   (lsp-bridge-ref-mode :select t :popup t :align bottom)))
   :hook
-  (my/late . popwin-mode))
+  (my/late . shackle-mode))
 
 (use-package magit
   :commands (magit-status))
@@ -594,8 +601,7 @@
 (defun my/kill-other-buffers ()
   "Kill all other buffers except the current one and essential buffers."
   (interactive)
-  (let* ((current (current-buffer))
-         (target-name '("*dashboard*"
+  (let ((target-name '("*dashboard*"
                         "*Help*"
                         "*Ibuffer*"
                         "*lsp-bridge-doc*"))
@@ -605,7 +611,7 @@
                         "Magit Process"))
          (killed-count 0))
     (dolist (buf (buffer-list))
-      (unless (eq buf current)
+      (unless (get-buffer-window buf t)
         (let ((name (buffer-name buf))
               (mode (buffer-local-value 'mode-name buf)))
           (when (or (and (not (string-prefix-p "*" name)) ; keep `*' and ` ' by default
@@ -642,24 +648,24 @@
 (defun my/split-window-left ()
   "Split window to the left, focus the left window."
   (interactive)
-  (call-interactively #'split-window-horizontally))
+  (call-interactively #'evil-window-vsplit))
 
 (defun my/split-window-right ()
   "Split window to the right, focus the right window."
   (interactive)
-  (call-interactively #'split-window-horizontally)
-  (call-interactively #'windmove-right))
+  (call-interactively #'evil-window-vsplit)
+  (call-interactively #'evil-window-right))
 
 (defun my/split-window-up ()
   "Split window to the up, focus the up window."
   (interactive)
-  (call-interactively #'split-window-vertically))
+  (call-interactively #'evil-window-split))
 
 (defun my/split-window-down ()
   "Split window to the down, focus the down window."
   (interactive)
-  (call-interactively #'split-window-vertically)
-  (call-interactively #'windmove-down))
+  (call-interactively #'evil-window-split)
+  (call-interactively #'evil-window-down))
 
 (defun my/last-focused-window ()
   "Go to the last focused window."
@@ -721,6 +727,7 @@
 
     "c"     '(:ignore t :which-key "code")
     "c a"   '("action"                . lsp-bridge-code-action)
+    "c c"   '("compile"               . compile)
     "c d"   '("definition"            . my/go-to-def)
     "c D"   '("definition"            . my/go-to-ref)
     "c e"   '("errors"                . flymake-show-buffer-diagnostics)
@@ -738,9 +745,10 @@
     "o T"   '("terminal here"         . vterm)
 
     "p"     '(:ignore t :which-key "project")
-    "p a"   '("switch project"        . projectile-add-known-project)
-    "p f"   '("project file"          . projectile-find-file)
-    "p p"   '("switch project"        . projectile-switch-project)
+    "p a"   '("add"                   . projectile-add-known-project)
+    "p c"   '("compile"               . projectile-compile-project)
+    "p f"   '("find file"             . projectile-find-file)
+    "p p"   '("switch"                . projectile-switch-project)
 
     "w"     '(:ignore t :which-key "window")
     "w h"   '("left"                  . evil-window-left)
@@ -792,11 +800,14 @@
     :states '(normal motion)
     "q"   #'my/last-focused-window
     "TAB" #'dirvish-subtree-toggle
+    "H"   #'dirvish-subtree-up
     "h"   #'dired-up-directory
     "l"   #'my/dirvish-open-file
     "RET" #'my/dirvish-open-file
     )
   )
+
+(my/load "init-private")
 
 (run-with-idle-timer
  0.2 nil
