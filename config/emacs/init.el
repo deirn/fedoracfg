@@ -330,6 +330,7 @@
   :custom
   (aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l)))
 
+;; popup window
 (use-package shackle
   :custom
   (shackle-default-size 0.25)
@@ -367,10 +368,24 @@
   :hook
   (my/late . elcord-mode))
 
+(use-package undo-fu
+  :custom
+  (undo-limit 256000)
+  (undo-strong-limit 2000000)
+  (undo-outer-limit 36000000))
+
+(use-package undo-fu-session
+  :after undo-fu
+  :custom
+  (undo-fu-session-compression 'zst)
+  :hook
+  (my/late . global-undo-fu-session-mode))
+
 (use-package evil
+  :after undo-fu
   :custom
   (evil-want-keybinding nil)
-  (evil-undo-system 'undo-redo)
+  (evil-undo-system 'undo-fu)
 
   :config
   (evil-mode 1))
@@ -447,6 +462,21 @@
 
 (use-package flymake
   :ensure nil
+  :config
+  (defvar my/flymake-buffers nil
+    "Saved flymake buffers.")
+
+  (define-advice flymake-show-buffer-diagnostics (:before (&rest _) quit-other)
+    "Quit other flymake windows before opeing new one."
+    (dolist (name my/flymake-buffers)
+      (when-let* ((buf (get-buffer name))
+                  (win (get-buffer-window buf)))
+        (quit-window t win)))
+    (setq my/flymake-buffers nil))
+
+  (define-advice flymake-show-buffer-diagnostics (:after (&rest _) save-buffer)
+    "Save flymake buffers."
+    (add-to-list 'my/flymake-buffers (flymake--diagnostics-buffer-name)))
   :hook
   (prog-mode . flymake-mode))
 
@@ -509,6 +539,13 @@
   ;; (lsp-bridge-enable-completion-in-minibuffer t)
   (lsp-bridge-enable-completion-in-string t)
 
+  ;; open reference match on current main window
+  (lsp-bridge-ref-open-file-in-request-window t)
+  ;; don't delete other main windows
+  (lsp-bridge-ref-delete-other-windows nil)
+  ;; don't kill match buffers when quiting reference search
+  (lsp-bridge-ref-kill-temp-buffer-p nil)
+
   (acm-enable-capf t)
   (acm-enable-icon t)
   (acm-enable-tabnine nil)
@@ -517,17 +554,28 @@
   :config
   (evil-set-initial-state 'lsp-bridge-ref-mode 'insert)
 
-  ;; enable mode line manually, with rocket icon and without extra space suffix
-  (defun my/lsp-bridge-rocket-mode-line (ret)
-    "Replace `lsp-bridge' mode line string with rocket icon."
+  ;; Add to jump list before going to definition, impl, etc
+  (advice-add 'lsp-bridge--record-mark-ring :before #'evil-set-jump)
+
+  (define-advice lsp-bridge-ref-open-file (:around (orig-fn &rest args) set-jump)
+    "Add to jump list before opening result file."
+    (define-advice find-file (:before (&rest _) set-jump-inner) (evil-set-jump))
+    (apply orig-fn args)
+    (advice-remove 'find-file #'find-file@set-jump-inner))
+
+  (add-to-list 'mode-line-misc-info `(lsp-bridge-mode ("" lsp-bridge--mode-line-format)))
+  (define-advice lsp-bridge--mode-line-format (:filter-return (ret) rocket)
+    "Replace `lsp-bridge' mode line string with a rocket icon."
     (when ret
       (propertize (nerd-icons-mdicon "nf-md-rocket") 'face (get-text-property 0 'face ret))))
-  (advice-add 'lsp-bridge--mode-line-format :filter-return #'my/lsp-bridge-rocket-mode-line)
-  (add-to-list 'mode-line-misc-info `(lsp-bridge-mode ("" lsp-bridge--mode-line-format)))
 
-  ;; enable corfu when lsp-bridge is off and vice versa
-  (advice-add 'lsp-bridge--enable :after (lambda () (corfu-mode -1)))
-  (advice-add 'lsp-bridge--disable :after (lambda () (corfu-mode 1)))
+  (define-advice lsp-bridge--enable (:after () disable-corfu)
+    "Disable corfu-mode when lsp-bridge is enabled."
+    (corfu-mode -1))
+
+  (define-advice lsp-bridge--disable (:after () enable-corfu)
+    "Re-enable corfu-mode when lsp-bridge is disabled."
+    (corfu-mode 1))
 
   (defvar my/lsp-bridge-doc-mode-map (make-sparse-keymap))
   (define-minor-mode my/lsp-bridge-doc-mode
@@ -602,14 +650,15 @@
   "Kill all other buffers except the current one and essential buffers."
   (interactive)
   (let ((target-name '("*dashboard*"
-                        "*Help*"
-                        "*Ibuffer*"
-                        "*lsp-bridge-doc*"))
-         (target-mode '("Helpful"
-                        "Custom"
-                        "Magit"
-                        "Magit Process"))
-         (killed-count 0))
+                       "*Help*"
+                       "*Ibuffer*"
+                       "*lsp-bridge-doc*"))
+        (target-mode '("Helpful"
+                       "Custom"
+                       "Magit"
+                       "Magit Process"
+                       "Flymake diagnostics"))
+        (killed-count 0))
     (dolist (buf (buffer-list))
       (unless (get-buffer-window buf t)
         (let ((name (buffer-name buf))
@@ -730,14 +779,13 @@
     "c c"   '("compile"               . compile)
     "c d"   '("definition"            . my/go-to-def)
     "c D"   '("definition"            . my/go-to-ref)
-    "c e"   '("errors"                . flymake-show-buffer-diagnostics)
-    "c E"   '("project errors"        . flymake-show-project-diagnostics)
     "c f"   '("format"                . my/format-buffer)
     "c r"   '("rename symbol"         . lsp-bridge-rename)
     "c s"   '("symbol list"           . consult-imenu)
 
     "o"     '(:ignore t :which-key "open")
     "o d"   '("dashboard"             . dashboard-open)
+    "o e"   '("error"                 . flymake-show-buffer-diagnostics)
     "o o"   '("dired"                 . dired)
     "o p"   '("project view"          . dirvish-side)
     "o s"   '("scratch"               . scratch-buffer)
