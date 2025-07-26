@@ -90,6 +90,7 @@
   (window-divider-default-right-width 5)
 
   (tab-always-indent 'complete)
+  (truncate-lines t)
   (tab-width 4)
   (standard-indent 4)
   (whitespace-style '(face tabs tab-mark
@@ -386,6 +387,7 @@
   :custom
   (evil-want-keybinding nil)
   (evil-undo-system 'undo-fu)
+  (evil-respect-visual-line-mode t)
 
   :config
   (evil-mode 1))
@@ -657,7 +659,9 @@
                        "Custom"
                        "Magit"
                        "Magit Process"
-                       "Flymake diagnostics"))
+                       "Flymake diagnostics"
+                       "Grep"
+                       "Backtrace"))
         (killed-count 0))
     (dolist (buf (buffer-list))
       (unless (get-buffer-window buf t)
@@ -739,6 +743,12 @@
       (call-interactively #'dirvish-side-decrease-width)
     (call-interactively #'evil-window-decrease-width)))
 
+(defun my/consult-ripgrep-with-dir ()
+  "Run `consult-ripgrep` with universal argument to prompt for directory."
+  (interactive)
+  (let ((current-prefix-arg '(4))) ; simulate C-u
+    (call-interactively #'consult-ripgrep)))
+
 (use-package general
   :config
   (global-unset-key (kbd "C-SPC"))
@@ -798,6 +808,10 @@
     "p f"   '("find file"             . projectile-find-file)
     "p p"   '("switch"                . projectile-switch-project)
 
+    "s"     '(:ignore t :which-key "search")
+    "s p"   '("project"        . consult-ripgrep)
+    "s d"   '("dir"            . my/consult-ripgrep-with-dir)
+
     "w"     '(:ignore t :which-key "window")
     "w h"   '("left"                  . evil-window-left)
     "w H"   '("split left"            . my/split-window-left)
@@ -820,7 +834,8 @@
     ;; "t i"   '("indent"                . highlight-indent-guides-mode)
     "t l"   '("lsp"                   . lsp-bridge-mode)
     "t n"   '("line numbers"          . display-line-numbers-mode)
-    "t w"   '("whitespace"            . whitespace-mode)
+    "t w"   '("wrap"                  . visual-line-mode)
+    "t SPC" '("whitespace"            . whitespace-mode)
     )
 
   (general-def
@@ -852,6 +867,11 @@
     "h"   #'dired-up-directory
     "l"   #'my/dirvish-open-file
     "RET" #'my/dirvish-open-file
+    )
+
+  (general-def
+    :keymaps 'minibuffer-local-map
+    "C-c C-e" #'embark-export
     )
   )
 
