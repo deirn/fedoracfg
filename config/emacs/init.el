@@ -117,6 +117,8 @@
                                    extended-command-history))
 
   (read-extended-command-predicate #'command-completion-default-include-p)
+
+  (which-func-display nil)
   :config
   (set-face-attribute 'default nil
                       :family "JetBrainsMono NF"
@@ -168,6 +170,7 @@
   (prog-mode . display-line-numbers-mode)
   (conf-mode . display-line-numbers-mode)
   (text-mode . display-line-numbers-mode)
+  (prog-mode . which-function-mode)
   (before-save . delete-trailing-whitespace)
   (my/late . save-place-mode)
   (my/late . savehist-mode)
@@ -184,6 +187,28 @@
   :custom
   (doom-modeline-buffer-file-name-style 'relative-from-project)
   (doom-modeline-buffer-encoding 'nondefault)
+  :config
+  (doom-modeline-def-segment my/breadcrumb
+    "Display breadcrumb."
+    (when which-func-mode
+      (let ((func (eval (plist-get which-func-current :eval))))
+        (when (and func (not (string= func "n/a")))
+          (concat (doom-modeline-spc)
+                  (propertize func 'face 'which-func))))))
+
+  (doom-modeline-def-segment my/lsp
+    (when lsp-bridge-mode
+      (let ((sep (doom-modeline-spc)))
+        (concat sep
+                (lsp-bridge--mode-line-format)
+                sep))))
+
+  (doom-modeline-segment--major-mode)
+  (doom-modeline-def-modeline 'my/modeline
+    '(eldoc bar window-state workspace-name window-number modals matches follow buffer-info remote-host buffer-position word-count parrot selection-info)
+    '(my/breadcrumb compilation objed-state misc-info project-name persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding my/lsp major-mode process vcs check time))
+
+  (add-hook 'doom-modeline-mode-hook (lambda () (doom-modeline-set-modeline 'my/modeline 'default)))
   :hook
   (my/late . doom-modeline-mode))
 
@@ -197,6 +222,14 @@
 (use-package vi-tilde-fringe
   :hook
   (my/late . global-vi-tilde-fringe-mode))
+
+(use-package rainbow-delimiters
+  :hook
+  (prog-mode . rainbow-delimiters-mode))
+
+(use-package symbol-overlay
+  :hook
+  (prog-mode . symbol-overlay-mode))
 
 (use-package transient
   :custom
@@ -257,10 +290,6 @@
   (set-face-background 'child-frame-border my/posframe-border-color)
   :hook
   (my/late . mini-frame-mode))
-
-(use-package rainbow-delimiters
-  :hook
-  (prog-mode . rainbow-delimiters-mode))
 
 ;; (use-package highlight-indent-guides
 ;;   :custom
@@ -593,6 +622,7 @@
 
   ;; (lsp-bridge-enable-completion-in-minibuffer t)
   (lsp-bridge-enable-completion-in-string t)
+  (lsp-bridge-symbols-enable-which-func t)
 
   ;; open reference match on current main window
   (lsp-bridge-ref-open-file-in-request-window t)
@@ -618,7 +648,6 @@
     (apply orig-fn args)
     (advice-remove 'find-file #'find-file@set-jump-inner))
 
-  (add-to-list 'mode-line-misc-info `(lsp-bridge-mode ("" lsp-bridge--mode-line-format)))
   (define-advice lsp-bridge--mode-line-format (:filter-return (ret) rocket)
     "Replace `lsp-bridge' mode line string with a rocket icon."
     (when ret
