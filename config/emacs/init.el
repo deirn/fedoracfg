@@ -211,6 +211,18 @@
   (let ((top-center (posframe-poshandler-frame-top-center info)))
     (cons (car top-center) my/posframe-y-offset)))
 
+;; (use-package posframe
+;;   :config
+;;   (define-advice posframe-show (:around (orig-fn buffer-or-name &rest rest) mini-frame-compat)
+;;     "Use saved parent frame from mini-frame so it behaves correctly."
+;;     (when (not (plist-get rest :parent-frame))
+;;       ;; (let* ((selected (selected-frame))
+;;       ;;        (mini-frames (list mini-frame-frame mini-frame-completions-frame))
+;;       ;;        (selected-is-mini-frame (memq selected mini-frames)))
+;;       ;;   (when selected-is-mini-frame
+;;       (setq rest (plist-put rest :parent-frame mini-frame-selected-frame)));))
+;;     (apply orig-fn buffer-or-name rest)))
+
 (use-package which-key-posframe
   :custom
   (which-key-posframe-poshandler #'my/posframe-poshandler)
@@ -220,7 +232,6 @@
   :hook
   (my/late . which-key-posframe-mode))
 
-
 (use-package transient-posframe
   :custom
   (transient-posframe-poshandler #'my/posframe-poshandler)
@@ -229,6 +240,17 @@
   (set-face-background 'transient-posframe-border my/posframe-border-color)
   :hook
   (my/late . transient-posframe-mode))
+
+(use-package vertico-posframe
+  :custom
+  (vertico-posframe-border-width 1)
+  (vertico-posframe-poshandler #'my/posframe-poshandler)
+  (vertico-posframe-parameters my/posframe-params)
+  :config
+  (define-advice vertico-posframe--get-border-color (:override () all-same-color)
+    my/posframe-border-color)
+  :hook
+  (my/late . vertico-posframe-mode))
 
 (use-package mini-frame
   :custom
@@ -241,6 +263,7 @@
                                 (background-color . "#21242b")))
   :config
   (add-to-list 'mini-frame-advice-functions 'map-y-or-n-p)
+  (add-to-list 'mini-frame-ignore-functions 'completing-read)
   (add-to-list 'mini-frame-ignore-commands 'evil-ex)
   (set-face-background 'child-frame-border my/posframe-border-color)
   :hook
@@ -340,6 +363,7 @@
                    ("*lsp-bridge-doc*" :select t :popup t :align right)
                    (Man-mode :select t :popup t :align right)
                    (vterm-mode :select t :popup t :align right)
+                   (grep-mode :select t :popup t :align right)
 
                    (flymake-diagnostics-buffer-mode :select t :popup t :align bottom)
                    (lsp-bridge-ref-mode :select t :popup t :align bottom)))
@@ -524,6 +548,7 @@
                  :files (:defaults "*.el" "*.py" "acm" "core" "langserver" "multiserver" "resources")
                  :build (:not elpaca--byte-compile))
   :custom
+  (elpaca-build-steps)
   ;; use uv, so it has consistent package version
   (lsp-bridge-python-command "uv")
   (lsp-bridge-enable-hover-diagnostic t)
@@ -634,6 +659,7 @@
   (interactive)
   (if (my/has-lsp)
       (call-interactively #'lsp-bridge-find-def)
+    (evil-set-jump)
     (call-interactively #'evil-goto-definition)))
 
 (defun my/go-to-ref ()
@@ -743,6 +769,12 @@
       (call-interactively #'dirvish-side-decrease-width)
     (call-interactively #'evil-window-decrease-width)))
 
+(defun my/consult-fd-with-dir ()
+  "Run `consult-fd` with universal argument to prompt for directory."
+  (interactive)
+  (let ((current-prefix-arg '(4))) ; simulate C-u
+    (call-interactively #'consult-ripgrep)))
+
 (defun my/consult-ripgrep-with-dir ()
   "Run `consult-ripgrep` with universal argument to prompt for directory."
   (interactive)
@@ -759,7 +791,7 @@
     :prefix "SPC"
     :global-prefix "C-SPC"
     "b"     '(:ignore t :which-key "buffer")
-    "b b"   '("switch"                . switch-to-buffer)
+    "b b"   '("switch"                . consult-buffer)
     "b i"   '("ibuffer"               . ibuffer)
     "b k"   '("kill this"             . kill-current-buffer)
     "b l"   '("last"                  . mode-line-other-buffer)
@@ -779,7 +811,7 @@
     "f"     '(:ignore t :which-key "file")
     "f f"   '("find"                  . find-file)
     "f s"   '("save"                  . save-buffer)
-    "f r"   '("recent files"          . recentf)
+    "f r"   '("recent files"          . consult-recent-file)
 
     "g"     '(:ignore t :which-key "git")
     "g g"   '("magit status"          . magit-status)
@@ -809,8 +841,15 @@
     "p p"   '("switch"                . projectile-switch-project)
 
     "s"     '(:ignore t :which-key "search")
-    "s p"   '("project"        . consult-ripgrep)
-    "s d"   '("dir"            . my/consult-ripgrep-with-dir)
+    "s b"   '("buffer"                . consult-buffer)
+    "s e"   '("error"                 . consult-flymake)
+    "s f"   '("fd project"            . consult-fd)
+    "s F"   '("fd directory"          . my/consult-fd-with-dir)
+    "s i"   '("imenu"                 . consult-imenu)
+    "s l"   '("line"                  . consult-line)
+    "s L"   '("line multi"            . consult-line-multi)
+    "s r"   '("rg project"            . consult-ripgrep)
+    "s R"   '("rg directory"          . my/consult-ripgrep-with-dir)
 
     "w"     '(:ignore t :which-key "window")
     "w h"   '("left"                  . evil-window-left)
@@ -831,7 +870,6 @@
 
     "t"     '(:ignore t :which-key "toggle")
     "t d"   '("discord rich presence" . elcord-mode)
-    ;; "t i"   '("indent"                . highlight-indent-guides-mode)
     "t l"   '("lsp"                   . lsp-bridge-mode)
     "t n"   '("line numbers"          . display-line-numbers-mode)
     "t w"   '("wrap"                  . visual-line-mode)
