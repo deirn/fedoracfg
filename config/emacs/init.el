@@ -104,6 +104,7 @@
   (create-lockfiles nil)
   (make-backup-files nil)
 
+  (which-key-idle-delay 0.3)
   (which-key-sort-order 'which-key-key-order-alpha)
   (which-key-sort-uppercase-first nil)
   (which-key-dont-use-unicode nil)
@@ -176,8 +177,8 @@
   (my/late . window-divider-mode))
 
 (use-package doom-themes
-  :hook
-  (my/late . (lambda () (load-theme 'doom-one t))))
+  :config
+  (load-theme 'doom-one t))
 
 (use-package doom-modeline
   :custom
@@ -211,22 +212,11 @@
   (let ((top-center (posframe-poshandler-frame-top-center info)))
     (cons (car top-center) my/posframe-y-offset)))
 
-;; (use-package posframe
-;;   :config
-;;   (define-advice posframe-show (:around (orig-fn buffer-or-name &rest rest) mini-frame-compat)
-;;     "Use saved parent frame from mini-frame so it behaves correctly."
-;;     (when (not (plist-get rest :parent-frame))
-;;       ;; (let* ((selected (selected-frame))
-;;       ;;        (mini-frames (list mini-frame-frame mini-frame-completions-frame))
-;;       ;;        (selected-is-mini-frame (memq selected mini-frames)))
-;;       ;;   (when selected-is-mini-frame
-;;       (setq rest (plist-put rest :parent-frame mini-frame-selected-frame)));))
-;;     (apply orig-fn buffer-or-name rest)))
-
 (use-package which-key-posframe
   :custom
   (which-key-posframe-poshandler #'my/posframe-poshandler)
-  (which-key-posframe-parameters my/posframe-params)
+  (which-key-posframe-parameters `(,@my/posframe-params
+                                   (z-group . above)))
   :config
   (set-face-background 'which-key-posframe-border my/posframe-border-color)
   :hook
@@ -246,11 +236,10 @@
   (vertico-posframe-border-width 1)
   (vertico-posframe-poshandler #'my/posframe-poshandler)
   (vertico-posframe-parameters my/posframe-params)
+  (vertico-multiform-commands '((t posframe)))
   :config
   (define-advice vertico-posframe--get-border-color (:override () all-same-color)
-    my/posframe-border-color)
-  :hook
-  (my/late . vertico-posframe-mode))
+    my/posframe-border-color))
 
 (use-package mini-frame
   :custom
@@ -454,18 +443,57 @@
   :hook
   (prog-mode . combobulate-mode))
 
-(use-package vertico
+(use-package consult)
+
+(use-package embark
   :config
-  (vertico-mode 1))
+  ;; https://github.com/oantolin/embark/wiki/Additional-Configuration#use-which-key-like-a-key-menu-prompt
+  (defun embark-which-key-indicator ()
+    (lambda (&optional keymap targets prefix)
+      (if (null keymap)
+          (which-key--hide-popup-ignore-command)
+        (which-key--show-keymap
+         (if (eq (plist-get (car targets) :type) 'embark-become)
+             "Become"
+           (format "Act on %s '%s'%s"
+                   (plist-get (car targets) :type)
+                   (embark--truncate-target (plist-get (car targets) :target))
+                   (if (cdr targets) "…" "")))
+         (if prefix
+             (pcase (lookup-key keymap prefix 'accept-default)
+               ((and (pred keymapp) km) km)
+               (_ (key-binding prefix 'accept-default)))
+           keymap)
+         nil nil t (lambda (binding)
+                     (not (string-suffix-p "-argument" (cdr binding))))))))
+
+  (setq embark-indicators
+        '(embark-which-key-indicator
+          embark-highlight-indicator
+          embark-isearch-highlight-indicator))
+
+  (defun embark-hide-which-key-indicator (fn &rest args)
+    "Hide the which-key indicator immediately when using the completing-read prompter."
+    (which-key--hide-popup-ignore-command)
+    (let ((embark-indicators
+           (remq #'embark-which-key-indicator embark-indicators)))
+      (apply fn args)))
+
+  (advice-add #'embark-completing-read-prompter
+              :around #'embark-hide-which-key-indicator))
+
+(use-package embark-consult :after embark)
+
+(use-package vertico
+  :after embark
+  :config
+  (vertico-mode 1)
+  (vertico-multiform-mode 1))
 
 (use-package marginalia
   :after vertico
   :config
   (marginalia-mode 1))
-
-(use-package consult)
-(use-package embark)
-(use-package embark-consult :after embark)
 
 (use-package orderless
   :custom
@@ -814,7 +842,8 @@
     "f r"   '("recent files"          . consult-recent-file)
 
     "g"     '(:ignore t :which-key "git")
-    "g g"   '("magit status"          . magit-status)
+    "g g"   '("git"                   . magit-status)
+    "g b"   '("blame"                 . magit-blame)
 
     "c"     '(:ignore t :which-key "code")
     "c a"   '("action"                . lsp-bridge-code-action)
@@ -877,7 +906,9 @@
     )
 
   (general-def
-    "M-<f4>" #'my/quit-emacs)
+    "M-<f4>" #'my/quit-emacs
+    "M-e"    #'embark-act
+    )
 
   (general-def
     :states 'normal
@@ -909,7 +940,7 @@
 
   (general-def
     :keymaps 'minibuffer-local-map
-    "C-c C-e" #'embark-export
+    "M-a" #'marginalia-cycle
     )
   )
 
