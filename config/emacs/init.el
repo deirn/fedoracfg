@@ -118,6 +118,7 @@
 
   (read-extended-command-predicate #'command-completion-default-include-p)
 
+  ;; use custom doom-modeline segment, see below
   (which-func-display nil)
   :config
   (set-face-attribute 'default nil
@@ -189,21 +190,25 @@
   (doom-modeline-buffer-encoding 'nondefault)
   :config
   (doom-modeline-def-segment my/breadcrumb
-    "Display breadcrumb."
-    (when which-func-mode
-      (let ((func (eval (plist-get which-func-current :eval))))
-        (when (and func (not (string= func "n/a")))
-          (concat (doom-modeline-spc)
-                  (propertize func 'face 'which-func))))))
+    (when-let* ((_ which-func-mode)
+                (func (eval (plist-get which-func-current :eval)))
+                (_ (and func (not (string= func "n/a"))))
+                (func (if (length> func 30)
+                          (concat doom-modeline-ellipsis (substring func (- (length func) 29)) )
+                        func))
+                (spc (doom-modeline-spc))
+                (face (doom-modeline-face 'which-func)))
+      (concat spc
+              (propertize func 'face face)
+              spc)))
 
   (doom-modeline-def-segment my/lsp
-    (when lsp-bridge-mode
-      (let ((sep (doom-modeline-spc)))
-        (concat sep
-                (lsp-bridge--mode-line-format)
-                sep))))
+    (when-let* ((_ lsp-bridge-mode)
+                (sep (doom-modeline-spc)))
+      (concat sep
+              (lsp-bridge--mode-line-format)
+              sep)))
 
-  (doom-modeline-segment--major-mode)
   (doom-modeline-def-modeline 'my/modeline
     '(eldoc bar window-state workspace-name window-number modals matches follow buffer-info remote-host buffer-position word-count parrot selection-info)
     '(my/breadcrumb compilation objed-state misc-info project-name persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding my/lsp major-mode process vcs check time))
@@ -596,6 +601,9 @@
   (dape-breakpoint-global-mode 1))
 
 (use-package corfu
+  :custom
+  (corfu-auto t)
+  (corfu-auto-prefix 2)
   :hook
   (my/late . global-corfu-mode))
 
@@ -632,7 +640,7 @@
   (lsp-bridge-ref-kill-temp-buffer-p nil)
 
   (acm-enable-capf t)
-  (acm-enable-icon t)
+  (acm-enable-icon nil)
   (acm-enable-tabnine nil)
   (acm-candidate-match-function #'orderless-flex)
 
@@ -651,7 +659,8 @@
   (define-advice lsp-bridge--mode-line-format (:filter-return (ret) rocket)
     "Replace `lsp-bridge' mode line string with a rocket icon."
     (when ret
-      (propertize (nerd-icons-mdicon "nf-md-rocket") 'face (get-text-property 0 'face ret))))
+      (let ((face (doom-modeline-face (get-text-property 0 'face ret))))
+        (propertize (nerd-icons-mdicon "nf-md-rocket") 'face face))))
 
   (define-advice lsp-bridge--enable (:after () disable-corfu)
     "Disable corfu-mode when lsp-bridge is enabled."
