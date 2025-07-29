@@ -243,7 +243,7 @@
 (setq +posframe-y-offset 100
       +posframe-border-color "#bbc2cf"
       +posframe-params '((left-fringe 10)
-                           (right-fringe 10)))
+                         (right-fringe 10)))
 
 (defun +posframe-poshandler (info)
   "Custom poshandler, INFO."
@@ -401,6 +401,20 @@
 
 (use-package magit
   :commands (magit-status))
+
+(use-package diff-hl
+  :config
+  ;; https://github.com/dgutov/diff-hl/issues/116#issuecomment-1573253134
+  (let* ((width 2)
+         (bitmap (vector (1- (expt 2 width)))))
+    (define-fringe-bitmap '+diff-hl-bitmap bitmap 1 width '(top t)))
+  (setq diff-hl-fringe-bmp-function (lambda (type pos) '+diff-hl-bitmap))
+
+  (set-face-background 'diff-hl-insert nil)
+  (set-face-background 'diff-hl-change nil)
+  (set-face-background 'diff-hl-delete nil)
+  :hook
+  (+late . global-diff-hl-mode))
 
 (use-package git-modes
   :mode
@@ -785,9 +799,25 @@
   (load-file (expand-file-name "init.el" user-emacs-directory))
   (message "init.el reloaded!"))
 
+(defun +last-focused-window ()
+  "Go to the last focused window."
+  (interactive)
+  (let ((win (get-mru-window t t t)))
+    (unless win (error "Last window not found"))
+    (let ((frame (window-frame win)))
+      (select-frame-set-input-focus frame)
+      (select-window win))))
+
 (defun +is-dirvish-side (&optional window)
   "Returns t if WINDOW is `dirvish-side'."
   (window-parameter window '+dirvish-side))
+
+(defun +dirvish-quit ()
+  "Dirvish q key."
+  (interactive)
+  (if (+is-dirvish-side)
+      (+last-focused-window)
+    (quit-window)))
 
 (defun +dirvish-open-file ()
   "Open file in main window, or open directory in current window."
@@ -822,15 +852,6 @@
   (interactive)
   (call-interactively #'evil-window-split)
   (call-interactively #'evil-window-down))
-
-(defun +last-focused-window ()
-  "Go to the last focused window."
-  (interactive)
-  (let ((win (get-mru-window t t t)))
-    (unless win (error "Last window not found"))
-    (let ((frame (window-frame win)))
-      (select-frame-set-input-focus frame)
-      (select-window win))))
 
 (defun +window-increase-width ()
   "Increase window width."
@@ -891,8 +912,10 @@
     "f r"   '("recent files"          . consult-recent-file)
 
     "g"     '(:ignore t :which-key "git")
-    "g g"   '("git"                   . magit-status)
     "g b"   '("blame"                 . magit-blame)
+    "g d"   '("diff"                  . magit-diff)
+    "g g"   '("git"                   . magit-status)
+    "g h"   '("hunk"                  . diff-hl-show-hunk)
 
     "c"     '(:ignore t :which-key "code")
     "c a"   '("action"                . lsp-bridge-code-action)
@@ -948,6 +971,7 @@
     "t"     '(:ignore t :which-key "toggle")
     "t d"   '("discord rich presence" . elcord-mode)
     "t l"   '("lsp"                   . lsp-bridge-mode)
+    "t m"   '("menu bar"              . menu-bar-mode)
     "t n"   '("line numbers"          . display-line-numbers-mode)
     "t w"   '("wrap"                  . visual-line-mode)
     "t SPC" '("whitespace"            . whitespace-mode)
@@ -978,7 +1002,7 @@
   (general-def
     :keymaps 'dirvish-mode-map
     :states '(normal motion)
-    "q"   #'+last-focused-window
+    "q"   #'+dirvish-quit
     "TAB" #'dirvish-subtree-toggle
     "H"   #'dirvish-subtree-up
     "h"   #'dired-up-directory
