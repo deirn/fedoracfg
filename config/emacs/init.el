@@ -2,11 +2,11 @@
 
 (when (version< emacs-version "30") (error "This requires Emacs 30 and above!"))
 
-(defun my/load (file)
+(defun +load (file)
   "Load a FILE."
   (load (expand-file-name file user-emacs-directory) t))
 
-(my/load "elpaca-init")
+(+load "elpaca-init")
 
 (use-package benchmark-init
   :config
@@ -21,7 +21,7 @@
   (when (memq window-system '(mac ns x pgtk))
     (exec-path-from-shell-initialize)))
 
-(defcustom my/late-hook nil
+(defcustom +late-hook nil
   "Hook that runs after startup."
   :type 'hook)
 
@@ -131,7 +131,7 @@
 
   ;; Custom functions/hooks for persisting/loading frame geometry upon save/load
   ;; https://www.reddit.com/r/emacs/comments/4ermj9/comment/d237n0i
-  (defun my/save-frameg ()
+  (defun +save-frameg ()
     "Gets the current frame's geometry and saves to `frameg.el'."
     (let ((frameg-left (frame-parameter (selected-frame) 'left))
           (frameg-top (frame-parameter (selected-frame) 'top))
@@ -156,7 +156,7 @@
         (when (file-writable-p frameg-file)
           (write-file frameg-file)))))
 
-  (defun my/load-frameg ()
+  (defun +load-frameg ()
     "Loads `frameg.el' which should load the previous frame's geometry."
     (let ((frameg-file (expand-file-name "frameg.el" user-emacs-directory)))
       (when (file-readable-p frameg-file)
@@ -164,8 +164,8 @@
 
   ;; Special work to do ONLY when there is a window system being used
   (when window-system
-    (add-hook 'after-init-hook 'my/load-frameg)
-    (add-hook 'kill-emacs-hook 'my/save-frameg))
+    (add-hook 'after-init-hook '+load-frameg)
+    (add-hook 'kill-emacs-hook '+save-frameg))
 
   :hook
   (prog-mode . display-line-numbers-mode)
@@ -173,12 +173,12 @@
   (text-mode . display-line-numbers-mode)
   (prog-mode . which-function-mode)
   (before-save . delete-trailing-whitespace)
-  (my/late . save-place-mode)
-  (my/late . savehist-mode)
-  (my/late . global-hl-line-mode)
-  (my/late . electric-pair-mode)
-  (my/late . which-key-mode)
-  (my/late . window-divider-mode))
+  (+late . save-place-mode)
+  (+late . savehist-mode)
+  (+late . global-hl-line-mode)
+  (+late . electric-pair-mode)
+  (+late . which-key-mode)
+  (+late . window-divider-mode))
 
 (use-package doom-themes
   :config
@@ -189,7 +189,7 @@
   (doom-modeline-buffer-file-name-style 'relative-from-project)
   (doom-modeline-buffer-encoding 'nondefault)
   :config
-  (doom-modeline-def-segment my/breadcrumb
+  (doom-modeline-def-segment +breadcrumb
     (when-let* ((_ which-func-mode)
                 (func (eval (plist-get which-func-current :eval)))
                 (_ (and func (not (string= func "n/a"))))
@@ -202,31 +202,31 @@
               (propertize func 'face face)
               spc)))
 
-  (doom-modeline-def-segment my/lsp
+  (doom-modeline-def-segment +lsp
     (when-let* ((_ lsp-bridge-mode)
                 (sep (doom-modeline-spc)))
       (concat sep
               (lsp-bridge--mode-line-format)
               sep)))
 
-  (doom-modeline-def-modeline 'my/modeline
+  (doom-modeline-def-modeline '+modeline
     '(eldoc bar window-state workspace-name window-number modals matches follow buffer-info remote-host buffer-position word-count parrot selection-info)
-    '(my/breadcrumb compilation objed-state misc-info project-name persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding my/lsp major-mode process vcs check time))
+    '(+breadcrumb compilation objed-state misc-info project-name persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding +lsp major-mode process vcs check time))
 
-  (add-hook 'doom-modeline-mode-hook (lambda () (doom-modeline-set-modeline 'my/modeline 'default)))
+  (add-hook 'doom-modeline-mode-hook (lambda () (doom-modeline-set-modeline '+modeline 'default)))
   :hook
-  (my/late . doom-modeline-mode))
+  (+late . doom-modeline-mode))
 
 (use-package hide-mode-line
   :commands (hide-mode-line-mode))
 
 (use-package solaire-mode
   :hook
-  (my/late . solaire-global-mode))
+  (+late . solaire-global-mode))
 
 (use-package vi-tilde-fringe
   :hook
-  (my/late . global-vi-tilde-fringe-mode))
+  (+late . global-vi-tilde-fringe-mode))
 
 (use-package rainbow-delimiters
   :hook
@@ -240,50 +240,54 @@
   :custom
   (transient-mode-line-format nil))
 
-(setq my/posframe-y-offset 100
-      my/posframe-border-color "#bbc2cf"
-      my/posframe-params '((left-fringe 10)
+(setq +posframe-y-offset 100
+      +posframe-border-color "#bbc2cf"
+      +posframe-params '((left-fringe 10)
                            (right-fringe 10)))
 
-(defun my/posframe-poshandler (info)
+(defun +posframe-poshandler (info)
   "Custom poshandler, INFO."
   (let ((top-center (posframe-poshandler-frame-top-center info)))
-    (cons (car top-center) my/posframe-y-offset)))
+    (cons (car top-center) +posframe-y-offset)))
 
 (use-package which-key-posframe
   :custom
-  (which-key-posframe-poshandler #'my/posframe-poshandler)
-  (which-key-posframe-parameters `(,@my/posframe-params
-                                   (z-group . above)))
+  (which-key-posframe-poshandler #'+posframe-poshandler)
+  (which-key-posframe-parameters +posframe-params)
+  ;; (which-key-posframe-parameters `(,@+posframe-params
+  ;;                                  (z-group . above)))
   :config
-  (set-face-background 'which-key-posframe-border my/posframe-border-color)
+  (set-face-background 'which-key-posframe-border +posframe-border-color)
+
+  (define-advice which-key-posframe--show-buffer (:after (&rest _) raise)
+    (raise-frame (posframe--find-existing-posframe which-key--buffer)))
   :hook
-  (my/late . which-key-posframe-mode))
+  (+late . which-key-posframe-mode))
 
 (use-package transient-posframe
   :custom
-  (transient-posframe-poshandler #'my/posframe-poshandler)
-  (transient-posframe-parameters my/posframe-params)
+  (transient-posframe-poshandler #'+posframe-poshandler)
+  (transient-posframe-parameters +posframe-params)
   :config
-  (set-face-background 'transient-posframe-border my/posframe-border-color)
+  (set-face-background 'transient-posframe-border +posframe-border-color)
   :hook
-  (my/late . transient-posframe-mode))
+  (+late . transient-posframe-mode))
 
 (use-package vertico-posframe
   :custom
   (vertico-posframe-border-width 1)
-  (vertico-posframe-poshandler #'my/posframe-poshandler)
-  (vertico-posframe-parameters my/posframe-params)
+  (vertico-posframe-poshandler #'+posframe-poshandler)
+  (vertico-posframe-parameters +posframe-params)
   (vertico-multiform-commands '((t posframe)))
   :config
   (define-advice vertico-posframe--get-border-color (:override () all-same-color)
-    my/posframe-border-color))
+    +posframe-border-color))
 
 (use-package mini-frame
   :custom
   (mini-frame-detach-on-hide nil)
   (mini-frame-show-parameters `((left . 0.5)
-                                (top . ,my/posframe-y-offset)
+                                (top . ,+posframe-y-offset)
                                 (width . 0.6)
                                 (no-accept-focus . t)
                                 (child-frame-border-width . 1)
@@ -292,9 +296,26 @@
   (add-to-list 'mini-frame-advice-functions 'map-y-or-n-p)
   (add-to-list 'mini-frame-ignore-functions 'completing-read)
   (add-to-list 'mini-frame-ignore-commands 'evil-ex)
-  (set-face-background 'child-frame-border my/posframe-border-color)
+  (set-face-background 'child-frame-border +posframe-border-color)
   :hook
-  (my/late . mini-frame-mode))
+  (+late . mini-frame-mode))
+
+(defun +pop (pred &optional side width)
+  "Add `display-buffer-alist' side window rule for PRED with SIDE and WIDTH."
+  (add-to-list 'display-buffer-alist `(,pred
+                                       (display-buffer-reuse-window
+                                        display-buffer-in-side-window)
+                                       (post-command-select-window . t)
+                                       (side . ,(or side 'right))
+                                       (window-width . ,(or width 0.25)))))
+
+(+pop '(major-mode . help-mode))
+(+pop '(major-mode . apropos-mode))
+(+pop '(major-mode . grep-mode))
+(+pop '(major-mode . Custom-mode))
+(+pop '(this-command . help))
+(+pop '(this-command . customize))
+(+pop '(this-command . man))
 
 ;; (use-package highlight-indent-guides
 ;;   :custom
@@ -304,46 +325,47 @@
 ;;   :hook
 ;;   (prog-mode . highlight-indent-guides-mode))
 
-(use-package projectile
-  :init
-  (projectile-mode 1))
-
 (use-package dashboard
-  :after (projectile)
   :custom
+  (inhibit-startup-screen t)
   (dashboard-center-content t)
   (dashboard-vertically-center-content t)
   (dashboard-display-icons-p t)
   (dashboard-icon-type 'nerd-icons)
   (dashboard-set-heading-icons t)
   (dashboard-set-file-icons t)
-  (dashboard-projects-backend 'projectile)
   (dashboard-items '((recents  . 10)
                      (projects . 10)))
-  (initial-buffer-choice 'dashboard-open)
 
   :hook
-  (window-size-change-functions . my/schedule-dashboard-refresh)
+  (window-size-change-functions . +schedule-dashboard-refresh)
+
+  :init
+  (defun +maybe-open-dashboard ()
+    (when (length< command-line-args 2)
+      (dashboard-open)
+      (kill-buffer "*scratch*")))
+  (add-hook '+late-hook #'+maybe-open-dashboard)
 
   :config
-  (defun my/dashboard-refresh ()
+  (defun +dashboard-refresh ()
     (with-current-buffer "*dashboard*"
       (let ((inhibit-read-only t))
         (dashboard-insert-startupify-lists t))))
 
-  (defvar my/dashboard-resize-timer nil
+  (defvar +dashboard-resize-timer nil
     "Idle timer for debounced dashboard refresh.")
 
-  (defun my/schedule-dashboard-refresh (&optional _)
+  (defun +schedule-dashboard-refresh (&optional _)
     "Schedule dashboard refresh after resize."
-    (when my/dashboard-resize-timer
-      (cancel-timer my/dashboard-resize-timer))
-    (setq my/dashboard-resize-timer
+    (when +dashboard-resize-timer
+      (cancel-timer +dashboard-resize-timer))
+    (setq +dashboard-resize-timer
           (run-with-idle-timer
            0.5 nil
            (lambda ()
              (when (get-buffer "*dashboard*")
-               (my/dashboard-refresh)))))))
+               (+dashboard-refresh)))))))
 
 (use-package dirvish
   :custom
@@ -361,7 +383,7 @@
   :config
   (dirvish-side-follow-mode 1)
   (put 'dired-find-alternate-file 'disabled nil)
-  (add-to-list 'dirvish-side-window-parameters '(my/dirvish-side . t))
+  (add-to-list 'dirvish-side-window-parameters '(+dirvish-side . t))
 
   :hook
   (dired-mode . dired-omit-mode))
@@ -377,22 +399,6 @@
   :custom
   (aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l)))
 
-;; popup window
-(use-package shackle
-  :custom
-  (shackle-default-size 0.25)
-  (shackle-rules '((help-mode :select t :popup t :align right)
-                   (helpful-mode :select t :popup t :align right)
-                   ("*lsp-bridge-doc*" :select t :popup t :align right)
-                   (Man-mode :select t :popup t :align right)
-                   (vterm-mode :select t :popup t :align right)
-                   (grep-mode :select t :popup t :align right)
-
-                   (flymake-diagnostics-buffer-mode :select t :popup t :align bottom)
-                   (lsp-bridge-ref-mode :select t :popup t :align bottom)))
-  :hook
-  (my/late . shackle-mode))
-
 (use-package magit
   :commands (magit-status))
 
@@ -404,17 +410,21 @@
    ("\\.gitattributes\\'" . gitattributes-mode)))
 
 (use-package helpful
-  :commands (helpful-at-point))
+  :commands (helpful-at-point)
+  :config
+  (+pop '(major-mode . helpful-mode)))
 
 (use-package vterm
-  :commands (vterm vterm-other-window))
+  :commands (vterm vterm-other-window)
+  :config
+  (+pop '(this-command . vterm-other-window)))
 
 ;; discord rich presence
 (use-package elcord
   :custom
   (elcord-use-major-mode-as-main-icon t)
   :hook
-  (my/late . elcord-mode))
+  (+late . elcord-mode))
 
 (use-package undo-fu
   :custom
@@ -427,7 +437,7 @@
   :custom
   (undo-fu-session-compression 'zst)
   :hook
-  (my/late . global-undo-fu-session-mode))
+  (+late . global-undo-fu-session-mode))
 
 (use-package evil
   :after undo-fu
@@ -481,6 +491,8 @@
 
 (use-package embark
   :config
+  (+pop '(major-mode . embark-collect-mode))
+
   ;; https://github.com/oantolin/embark/wiki/Additional-Configuration#use-which-key-like-a-key-menu-prompt
   (defun embark-which-key-indicator ()
     (lambda (&optional keymap targets prefix)
@@ -551,20 +563,22 @@
 (use-package flymake
   :ensure nil
   :config
-  (defvar my/flymake-buffers nil
+  (defvar +flymake-buffers nil
     "Saved flymake buffers.")
 
   (define-advice flymake-show-buffer-diagnostics (:before (&rest _) quit-other)
     "Quit other flymake windows before opeing new one."
-    (dolist (name my/flymake-buffers)
+    (dolist (name +flymake-buffers)
       (when-let* ((buf (get-buffer name))
                   (win (get-buffer-window buf)))
         (quit-window t win)))
-    (setq my/flymake-buffers nil))
+    (setq +flymake-buffers nil))
 
   (define-advice flymake-show-buffer-diagnostics (:after (&rest _) save-buffer)
     "Save flymake buffers."
-    (add-to-list 'my/flymake-buffers (flymake--diagnostics-buffer-name)))
+    (add-to-list '+flymake-buffers (flymake--diagnostics-buffer-name)))
+
+  (+pop '(major-mode flymake-diagnostics-buffer-mode) 'bottom)
   :hook
   (prog-mode . flymake-mode))
 
@@ -583,20 +597,15 @@
   :config
   (add-hook 'flymake-diagnostic-functions #'hl-todo-flymake)
   :hook
-  (my/late . global-hl-todo-mode))
+  (+late . global-hl-todo-mode))
 
 (use-package dape
-  :after projectile
   :commands (dape)
-
   :custom
   (dape-buffer-window-arrangement 'left)
-  (dape-cwd-function #'projectile-project-root)
-
   :hook
   (kill-emacs . dape-breakpoint-save)
   (after-init . dape-breakpoint-load)
-
   :config
   (dape-breakpoint-global-mode 1))
 
@@ -605,7 +614,7 @@
   (corfu-auto t)
   (corfu-auto-prefix 2)
   :hook
-  (my/late . global-corfu-mode))
+  (+late . global-corfu-mode))
 
 (use-package lsp-bridge
   :after (yasnippet markdown-mode orderless)
@@ -646,6 +655,8 @@
 
   :config
   (evil-set-initial-state 'lsp-bridge-ref-mode 'insert)
+  (+pop "*lsp-bridge-doc*")
+  (+pop '(major-mode . lsp-bridge-ref-mode) 'bottom)
 
   ;; Add to jump list before going to definition, impl, etc
   (advice-add 'lsp-bridge--record-mark-ring :before #'evil-set-jump)
@@ -670,22 +681,22 @@
     "Re-enable corfu-mode when lsp-bridge is disabled."
     (corfu-mode 1))
 
-  (defvar my/lsp-bridge-doc-mode-map (make-sparse-keymap))
-  (define-minor-mode my/lsp-bridge-doc-mode
+  (defvar +lsp-bridge-doc-mode-map (make-sparse-keymap))
+  (define-minor-mode +lsp-bridge-doc-mode
     "Minor mode for *lsp-bridge-doc* buffer.")
 
-  (defun my/setup-lsp-bridge-doc-buffer ()
+  (defun +setup-lsp-bridge-doc-buffer ()
     "Setup *lsp-bridge-doc* buffer."
     (when-let ((buf (get-buffer "*lsp-bridge-doc*")))
       (with-current-buffer buf
-        (unless my/lsp-bridge-doc-mode
-          (my/lsp-bridge-doc-mode 1))
+        (unless +lsp-bridge-doc-mode
+          (+lsp-bridge-doc-mode 1))
         (display-line-numbers-mode -1)
         (general-define-key
          :keymaps 'local
          :states '(normal motion)
          "q" #'quit-window))))
-  (add-hook 'buffer-list-update-hook #'my/setup-lsp-bridge-doc-buffer)
+  (add-hook 'buffer-list-update-hook #'+setup-lsp-bridge-doc-buffer)
 
   :hook
   (prog-mode . lsp-bridge-mode)
@@ -697,15 +708,15 @@
   :after flymake
   :ensure (:host github :repo "eki3z/flymake-bridge" :main nil))
 
-(defun my/has-lsp ()
+(defun +has-lsp ()
   "Return whether the current buffer has LSP server."
   (and (bound-and-true-p lsp-bridge-mode)
        (lsp-bridge-has-lsp-server-p)))
 
-(defun my/format-buffer ()
+(defun +format-buffer ()
   "Format buffer using apheleia or lsp-bridge."
   (interactive)
-  (if (my/has-lsp)
+  (if (+has-lsp)
       (progn
         (call-interactively #'lsp-bridge-code-format)
         (message "Formatted using lsp-bridge"))
@@ -713,34 +724,34 @@
       (call-interactively #'apheleia-format-buffer)
       (message "Formatted using apheleia"))))
 
-(defun my/show-documentation ()
+(defun +show-documentation ()
   "Show documentation at point."
   (interactive)
-  (if (my/has-lsp)
+  (if (+has-lsp)
       (call-interactively #'lsp-bridge-show-documentation)
     (call-interactively #'helpful-at-point)))
 
-(defun my/go-to-def ()
+(defun +go-to-def ()
   "Show definition at point."
   (interactive)
-  (if (my/has-lsp)
+  (if (+has-lsp)
       (call-interactively #'lsp-bridge-find-def)
     (evil-set-jump)
     (call-interactively #'evil-goto-definition)))
 
-(defun my/go-to-ref ()
+(defun +go-to-ref ()
   "Show references at point."
   (interactive)
-  (if (my/has-lsp)
+  (if (+has-lsp)
       (call-interactively #'lsp-bridge-find-references)
     (call-interactively #'xref-find-references)))
 
-(defun my/open-config ()
+(defun +open-config ()
   "Open Emacs configuration."
   (interactive)
   (find-file (read-file-name "Find file in config: " user-emacs-directory)))
 
-(defun my/kill-other-buffers ()
+(defun +kill-other-buffers ()
   "Kill all other buffers except the current one and essential buffers."
   (interactive)
   (let ((target-name '("*dashboard*"
@@ -768,20 +779,20 @@
             (message "Killed %s" name)))))
     (message "Killed %d buffer(s)." killed-count)))
 
-(defun my/reload-init ()
+(defun +reload-init ()
   "Reload Emacs init.el."
   (interactive)
   (load-file (expand-file-name "init.el" user-emacs-directory))
   (message "init.el reloaded!"))
 
-(defun my/is-dirvish-side (&optional window)
+(defun +is-dirvish-side (&optional window)
   "Returns t if WINDOW is `dirvish-side'."
-  (window-parameter window 'my/dirvish-side))
+  (window-parameter window '+dirvish-side))
 
-(defun my/dirvish-open-file ()
+(defun +dirvish-open-file ()
   "Open file in main window, or open directory in current window."
   (interactive)
-  (if (not (my/is-dirvish-side))
+  (if (not (+is-dirvish-side))
       (call-interactively #'dired-find-alternate-file)
     (let ((file (dired-get-file-for-visit)))
       (if (file-directory-p file)
@@ -790,29 +801,29 @@
           (select-window (get-mru-window nil t t))
           (find-file file))))))
 
-(defun my/split-window-left ()
+(defun +split-window-left ()
   "Split window to the left, focus the left window."
   (interactive)
   (call-interactively #'evil-window-vsplit))
 
-(defun my/split-window-right ()
+(defun +split-window-right ()
   "Split window to the right, focus the right window."
   (interactive)
   (call-interactively #'evil-window-vsplit)
   (call-interactively #'evil-window-right))
 
-(defun my/split-window-up ()
+(defun +split-window-up ()
   "Split window to the up, focus the up window."
   (interactive)
   (call-interactively #'evil-window-split))
 
-(defun my/split-window-down ()
+(defun +split-window-down ()
   "Split window to the down, focus the down window."
   (interactive)
   (call-interactively #'evil-window-split)
   (call-interactively #'evil-window-down))
 
-(defun my/last-focused-window ()
+(defun +last-focused-window ()
   "Go to the last focused window."
   (interactive)
   (let ((win (get-mru-window t t t)))
@@ -821,27 +832,27 @@
       (select-frame-set-input-focus frame)
       (select-window win))))
 
-(defun my/window-increase-width ()
+(defun +window-increase-width ()
   "Increase window width."
   (interactive)
-  (if (my/is-dirvish-side)
+  (if (+is-dirvish-side)
       (call-interactively #'dirvish-side-increase-width)
     (call-interactively #'evil-window-increase-width)))
 
-(defun my/window-decrease-width ()
+(defun +window-decrease-width ()
   "Decrease window width."
   (interactive)
-  (if (my/is-dirvish-side)
+  (if (+is-dirvish-side)
       (call-interactively #'dirvish-side-decrease-width)
     (call-interactively #'evil-window-decrease-width)))
 
-(defun my/consult-fd-with-dir ()
+(defun +consult-fd-with-dir ()
   "Run `consult-fd` with universal argument to prompt for directory."
   (interactive)
   (let ((current-prefix-arg '(4))) ; simulate C-u
     (call-interactively #'consult-ripgrep)))
 
-(defun my/consult-ripgrep-with-dir ()
+(defun +consult-ripgrep-with-dir ()
   "Run `consult-ripgrep` with universal argument to prompt for directory."
   (interactive)
   (let ((current-prefix-arg '(4))) ; simulate C-u
@@ -861,7 +872,7 @@
     "b i"   '("ibuffer"               . ibuffer)
     "b k"   '("kill this"             . kill-current-buffer)
     "b l"   '("last"                  . mode-line-other-buffer)
-    "b K"   '("kill others"           . my/kill-other-buffers)
+    "b K"   '("kill others"           . +kill-other-buffers)
     "b n"   '("next"                  . next-buffer)
     "b p"   '("previous"              . previous-buffer)
     "b r"   '("revert"                . revert-buffer)
@@ -869,8 +880,8 @@
     "d"     '(:keymap dape-global-map :package dape :which-key "dape")
 
     "e"     '(:ignore t :which-key "emacs")
-    "e c"   '("open config"           . my/open-config)
-    "e r"   '("reload init.el"        . my/reload-init)
+    "e c"   '("open config"           . +open-config)
+    "e r"   '("reload init.el"        . +reload-init)
     "e R"   '("restart"               . restart-emacs)
     "e q"   '("quit"                  . save-buffers-kill-emacs)
 
@@ -886,9 +897,9 @@
     "c"     '(:ignore t :which-key "code")
     "c a"   '("action"                . lsp-bridge-code-action)
     "c c"   '("compile"               . compile)
-    "c d"   '("definition"            . my/go-to-def)
-    "c D"   '("definition"            . my/go-to-ref)
-    "c f"   '("format"                . my/format-buffer)
+    "c d"   '("definition"            . +go-to-def)
+    "c D"   '("definition"            . +go-to-ref)
+    "c f"   '("format"                . +format-buffer)
     "c r"   '("rename symbol"         . lsp-bridge-rename)
     "c s"   '("symbol list"           . consult-imenu)
 
@@ -902,38 +913,37 @@
     "o T"   '("terminal here"         . vterm)
 
     "p"     '(:ignore t :which-key "project")
-    "p a"   '("add"                   . projectile-add-known-project)
-    "p c"   '("compile"               . projectile-compile-project)
-    "p f"   '("find file"             . projectile-find-file)
-    "p p"   '("switch"                . projectile-switch-project)
+    "p c"   '("compile"               . project-compile)
+    "p f"   '("find file"             . project-find-file)
+    "p p"   '("switch"                . project-switch-project)
 
     "s"     '(:ignore t :which-key "search")
     "s b"   '("buffer"                . consult-buffer)
     "s e"   '("error"                 . consult-flymake)
     "s f"   '("fd project"            . consult-fd)
-    "s F"   '("fd directory"          . my/consult-fd-with-dir)
+    "s F"   '("fd directory"          . +consult-fd-with-dir)
     "s i"   '("imenu"                 . consult-imenu)
     "s l"   '("line"                  . consult-line)
     "s L"   '("line multi"            . consult-line-multi)
     "s r"   '("rg project"            . consult-ripgrep)
-    "s R"   '("rg directory"          . my/consult-ripgrep-with-dir)
+    "s R"   '("rg directory"          . +consult-ripgrep-with-dir)
 
     "w"     '(:ignore t :which-key "window")
     "w h"   '("left"                  . evil-window-left)
-    "w H"   '("split left"            . my/split-window-left)
+    "w H"   '("split left"            . +split-window-left)
     "w j"   '("down"                  . evil-window-down)
-    "w J"   '("split down"            . my/split-window-down)
+    "w J"   '("split down"            . +split-window-down)
     "w k"   '("up"                    . evil-window-up)
-    "w K"   '("split up"              . my/split-window-up)
+    "w K"   '("split up"              . +split-window-up)
     "w l"   '("right"                 . evil-window-right)
-    "w L"   '("split right"           . my/split-window-right)
+    "w L"   '("split right"           . +split-window-right)
     "w m"   '("maximize"              . delete-other-windows)
     "w q"   '("kill window"           . delete-window)
     "w w"   '("switch window"         . ace-window)
-    "w ="   '("increase width"        . my/window-increase-width)
-    "w -"   '("decrease width"        . my/window-decrease-width)
-    "w +"   '("increase height"       . my/window-increase-height)
-    "w _"   '("decrease height"       . my/window-decrease-height)
+    "w ="   '("increase width"        . +window-increase-width)
+    "w -"   '("decrease width"        . +window-decrease-width)
+    "w +"   '("increase height"       . +window-increase-height)
+    "w _"   '("decrease height"       . +window-decrease-height)
 
     "t"     '(:ignore t :which-key "toggle")
     "t d"   '("discord rich presence" . elcord-mode)
@@ -944,16 +954,16 @@
     )
 
   (general-def
-    "M-<f4>" #'my/quit-emacs
+    "M-<f4>" #'+quit-emacs
     "M-e"    #'embark-act
     )
 
   (general-def
     :states 'normal
     :keymaps 'override
-    "K"   #'my/show-documentation
-    "g d" #'my/go-to-def
-    "g r" #'my/go-to-ref
+    "K"   #'+show-documentation
+    "g d" #'+go-to-def
+    "g r" #'+go-to-ref
     "] e" #'flymake-goto-next-error
     "[ e" #'flymake-goto-prev-error
     )
@@ -968,12 +978,12 @@
   (general-def
     :keymaps 'dirvish-mode-map
     :states '(normal motion)
-    "q"   #'my/last-focused-window
+    "q"   #'+last-focused-window
     "TAB" #'dirvish-subtree-toggle
     "H"   #'dirvish-subtree-up
     "h"   #'dired-up-directory
-    "l"   #'my/dirvish-open-file
-    "RET" #'my/dirvish-open-file
+    "l"   #'+dirvish-open-file
+    "RET" #'+dirvish-open-file
     )
 
   (general-def
@@ -982,11 +992,11 @@
     )
   )
 
-(my/load "init-private")
+(+load "init-private")
 
 (run-with-idle-timer
  0.2 nil
  (lambda ()
-   (run-hooks 'my/late-hook)))
+   (run-hooks '+late-hook)))
 
 ;;; init.el ends here
