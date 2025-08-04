@@ -8,6 +8,9 @@
 
 (+load "elpaca-init")
 
+
+;; Optimizations
+
 (use-package benchmark-init
   :config
   (add-hook 'after-init-hook 'benchmark-init/deactivate))
@@ -21,11 +24,702 @@
   (when (memq window-system '(mac ns x pgtk))
     (exec-path-from-shell-initialize)))
 
+
+;; Custom Hooks
+
 (defcustom +late-hook nil
   "Hook that runs after startup."
   :type 'hook)
 
-;; language modes
+(defmacro late! (&rest body)
+  "Delay running BODY until after startup."
+  `(add-hook '+late-hook #'(lambda () ,@body)))
+
+
+;; Key Bindings Setup
+
+(setq which-key-idle-delay 0.3
+      which-key-sort-order 'which-key-key-order-alpha
+      which-key-sort-uppercase-first nil
+      which-key-dont-use-unicode nil
+      which-key-min-display-lines 5)
+
+(late! (which-key-mode))
+
+(use-package general
+  :config
+  (global-unset-key (kbd "C-SPC"))
+  (general-create-definer +spc
+    :states '(normal visual motion emacs)
+    :keymaps 'override
+    :prefix "SPC"
+    :global-prefix "C-SPC")
+
+  (+spc "c" '(:ignore t :which-key "code")
+    "o" '(:ignore t :which-key "open")
+    "t" '(:ignore t :which-key "toggle"))
+
+  (general-create-definer +normal
+    :states 'normal
+    :keymaps 'override)
+
+  (general-create-definer +visual
+    :states 'visual
+    :keymaps 'override))
+
+
+;; Behaviour
+
+(use-package emacs
+  :ensure nil
+  :custom
+  (use-dialog-box nil)
+  (confirm-kill-emacs #'yes-or-no-p)
+
+  (custom-file (expand-file-name "custom.el" user-emacs-directory))
+
+  ;; disable annoying bell sound
+  (ring-bell-function 'ignore)
+
+  ;; less jumpy scroll
+  (scroll-step 1)                     ; scroll one line at a time
+  (scroll-margin 2)                   ; start scrolling when 2 lines from bottom
+  (scroll-conservatively 100000)      ; never recenter automatically
+  (scroll-preserve-screen-position t) ; keep point position when scrolling
+  (auto-window-vscroll nil)
+
+  ;; disable backup `.#' and lockfiles `~'
+  (create-lockfiles nil)
+  (make-backup-files nil)
+
+  :config
+  (fset #'yes-or-no-p #'y-or-n-p)
+  (setq-default indent-tabs-mode nil))
+
+(defun +open-config ()
+  "Open Emacs configuration."
+  (interactive)
+  (find-file (read-file-name "Find file in config: " user-emacs-directory)))
+
+(defun +reload-init ()
+  "Reload Emacs init.el."
+  (interactive)
+  (load-file (expand-file-name "init.el" user-emacs-directory))
+  (message "init.el reloaded!"))
+
+(late!
+ (+spc
+   "c c" '("compile"        . compile)
+   "e"   '(:ignore t :which-key "emacs")
+   "e c" '("open config"    . +open-config)
+   "e r" '("reload init.el" . +reload-init)
+   "e R" '("restart"        . restart-emacs)
+   "e q" '("quit"           . save-buffers-kill-emacs))
+ (general-def "M-<f4>" #'+quit-emacs))
+
+
+;; UI Themes
+
+(set-face-attribute 'default nil
+                    :family "JetBrainsMono NF"
+                    :height 105)
+(set-face-attribute 'fixed-pitch nil :family "JetBrainsMono NF")
+
+(setq display-line-numbers-grow-only t
+      display-line-numbers-width-start t
+      display-line-numbers-type 'relative)
+
+(add-hook 'prog-mode-hook 'display-line-numbers-mode)
+(add-hook 'conf-mode-hook 'display-line-numbers-mode)
+(add-hook 'text-mode-hook 'display-line-numbers-mode)
+
+(late! (global-hl-line-mode))
+
+(use-package nerd-icons :defer t)
+
+(use-package doom-themes
+  :config
+  (load-theme 'doom-one t))
+
+(use-package doom-modeline
+  :custom
+  (doom-modeline-buffer-file-name-style 'relative-from-project)
+  (doom-modeline-buffer-encoding 'nondefault)
+  :hook
+  (+late . doom-modeline-mode))
+
+(use-package hide-mode-line
+  :commands (hide-mode-line-mode))
+
+(use-package solaire-mode
+  :hook
+  (+late . solaire-global-mode))
+
+(use-package vi-tilde-fringe
+  :hook
+  (+late . global-vi-tilde-fringe-mode))
+
+(use-package rainbow-delimiters
+  :hook
+  (prog-mode . rainbow-delimiters-mode))
+
+(use-package symbol-overlay
+  :hook
+  (prog-mode . symbol-overlay-mode))
+
+(use-package page-break-lines
+  :hook
+  (+late . global-page-break-lines-mode))
+
+(use-package hl-todo
+  :custom
+  (hl-todo-highlight-punctuation ":")
+  (hl-todo-keyword-faces '(("TODO" warning bold)
+                           ("FIXME" error bold)))
+  :config
+  (add-hook 'flymake-diagnostic-functions #'hl-todo-flymake)
+  :hook
+  (+late . global-hl-todo-mode))
+
+(late!
+ (+spc
+   "t m"   '("menu bar"              . menu-bar-mode)
+   "t n"   '("line numbers"          . display-line-numbers-mode)
+   "t w"   '("wrap"                  . visual-line-mode)
+   "t SPC" '("whitespace"            . whitespace-mode)))
+
+
+;; Frame
+
+;; Custom functions/hooks for persisting/loading frame geometry upon save/load
+;; https://www.reddit.com/r/emacs/comments/4ermj9/comment/d237n0i
+(defun +save-frameg ()
+  "Gets the current frame's geometry and saves to `frameg.el'."
+  (let ((frameg-left (frame-parameter (selected-frame) 'left))
+        (frameg-top (frame-parameter (selected-frame) 'top))
+        (frameg-width (frame-parameter (selected-frame) 'width))
+        (frameg-height (frame-parameter (selected-frame) 'height))
+        (frameg-fullscreen (frame-parameter (selected-frame) 'fullscreen))
+        (frameg-file (expand-file-name "frameg.el" user-emacs-directory)))
+    (with-temp-buffer
+      ;; Turn off backup for this file
+      (make-local-variable 'make-backup-files)
+      (setq make-backup-files nil)
+      (insert
+       ";;; This file stores the previous emacs frame's geometry. -*- lexical-binding: t; -*-\n"
+       ";;; Last generated " (current-time-string) ".\n"
+       "(setq initial-frame-alist\n"
+       " '("
+       (format " (top . %d)\n" (max frameg-top 0))
+       (format " (left . %d)\n" (max frameg-left 0))
+       (format " (width . %d)\n" (max frameg-width 0))
+       (format " (height . %d)\n" (max frameg-height 0))
+       (format " (fullscreen . %s)))\n" frameg-fullscreen))
+      (when (file-writable-p frameg-file)
+        (write-file frameg-file)))))
+
+(defun +load-frameg ()
+  "Loads `frameg.el' which should load the previous frame's geometry."
+  (let ((frameg-file (expand-file-name "frameg.el" user-emacs-directory)))
+    (when (file-readable-p frameg-file)
+      (load-file frameg-file))))
+
+;; Special work to do ONLY when there is a window system being used
+(when window-system
+  (add-hook 'after-init-hook '+load-frameg)
+  (add-hook 'kill-emacs-hook '+save-frameg))
+
+
+;; Window
+
+(setq window-divider-default-bottom-width 5
+      window-divider-default-right-width 5)
+
+(late! (window-divider-mode))
+
+(use-package ace-window
+  :commands (ace-window)
+  :custom
+  (aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l)))
+
+(defun +last-focused-window ()
+  "Go to the last focused window."
+  (interactive)
+  (let ((win (get-mru-window t t t)))
+    (unless win (error "Last window not found"))
+    (let ((frame (window-frame win)))
+      (select-frame-set-input-focus frame)
+      (select-window win))))
+
+(defun +split-window-left ()
+  "Split window to the left, focus the left window."
+  (interactive)
+  (call-interactively #'evil-window-vsplit))
+
+(defun +split-window-right ()
+  "Split window to the right, focus the right window."
+  (interactive)
+  (call-interactively #'evil-window-vsplit)
+  (call-interactively #'evil-window-right))
+
+(defun +split-window-up ()
+  "Split window to the up, focus the up window."
+  (interactive)
+  (call-interactively #'evil-window-split))
+
+(defun +split-window-down ()
+  "Split window to the down, focus the down window."
+  (interactive)
+  (call-interactively #'evil-window-split)
+  (call-interactively #'evil-window-down))
+
+(defun +window-increase-width ()
+  "Increase window width."
+  (interactive)
+  (if (+is-dirvish-side)
+      (call-interactively #'dirvish-side-increase-width)
+    (call-interactively #'evil-window-increase-width)))
+
+(defun +window-decrease-width ()
+  "Decrease window width."
+  (interactive)
+  (if (+is-dirvish-side)
+      (call-interactively #'dirvish-side-decrease-width)
+    (call-interactively #'evil-window-decrease-width)))
+
+(late!
+ (+spc
+   "w"   '(:ignore t :which-key "window")
+   "w h" '("left"            . evil-window-left)
+   "w H" '("split left"      . +split-window-left)
+   "w j" '("down"            . evil-window-down)
+   "w J" '("split down"      . +split-window-down)
+   "w k" '("up"              . evil-window-up)
+   "w K" '("split up"        . +split-window-up)
+   "w l" '("right"           . evil-window-right)
+   "w L" '("split right"     . +split-window-right)
+   "w m" '("maximize"        . delete-other-windows)
+   "w q" '("kill window"     . delete-window)
+   "w w" '("switch window"   . ace-window)
+   "w =" '("increase width"  . +window-increase-width)
+   "w -" '("decrease width"  . +window-decrease-width)
+   "w +" '("increase height" . +window-increase-height)
+   "w _" '("decrease height" . +window-decrease-height)))
+
+
+;; Child Frames
+
+(use-package transient
+  :custom
+  (transient-mode-line-format nil))
+
+(when (display-graphic-p)
+  (setq +posframe-y-offset 100
+        +posframe-border-color "#bbc2cf"
+        +posframe-params '((left-fringe 10)
+                           (right-fringe 10)))
+
+  (defun +posframe-poshandler (info)
+    (let ((top-center (posframe-poshandler-frame-top-center info)))
+      (cons (car top-center) +posframe-y-offset)))
+
+  (use-package which-key-posframe
+    :custom
+    (which-key-posframe-parameters `(,@+posframe-params
+                                     (z-group . above)))
+    :config
+    (defun +which-key-posframe-poshandler (info)
+      (let ((og-pos (+posframe-poshandler info))
+            (vertico-posframe (posframe--find-existing-posframe vertico-posframe--buffer)))
+        (if (frame-visible-p vertico-posframe)
+            (cons (car og-pos) (+ +posframe-y-offset (frame-pixel-height vertico-posframe) -1))
+          og-pos)))
+    (setq which-key-posframe-poshandler #'+which-key-posframe-poshandler)
+
+    (set-face-background 'which-key-posframe-border +posframe-border-color)
+    :hook
+    (+late . which-key-posframe-mode))
+
+  (use-package transient-posframe
+    :custom
+    (transient-posframe-poshandler #'+posframe-poshandler)
+    (transient-posframe-parameters +posframe-params)
+    :config
+    (set-face-background 'transient-posframe-border +posframe-border-color)
+    :hook
+    (+late . transient-posframe-mode))
+
+  (use-package vertico-posframe
+    :custom
+    (vertico-posframe-border-width 1)
+    (vertico-posframe-poshandler #'+posframe-poshandler)
+    (vertico-posframe-parameters +posframe-params)
+    (vertico-multiform-commands '((t posframe)))
+    :config
+    (define-advice vertico-posframe--get-border-color (:override () all-same-color)
+      +posframe-border-color))
+
+  (use-package mini-frame
+    :custom
+    (mini-frame-detach-on-hide nil)
+    (mini-frame-show-parameters `((left . 0.5)
+                                  (top . ,+posframe-y-offset)
+                                  (width . 0.6)
+                                  (no-accept-focus . t)
+                                  (child-frame-border-width . 1)
+                                  (background-color . "#21242b")))
+    :config
+    (add-to-list 'mini-frame-advice-functions 'map-y-or-n-p)
+    (add-to-list 'mini-frame-ignore-functions 'completing-read)
+    (add-to-list 'mini-frame-ignore-commands 'evil-ex)
+    (set-face-background 'child-frame-border +posframe-border-color)
+    :hook
+    (+late . mini-frame-mode)))
+
+
+;; Side Popups
+
+(defun +pop (pred &optional side width)
+  "Add `display-buffer-alist' side window rule for PRED with SIDE and WIDTH."
+  (add-to-list 'display-buffer-alist `(,pred
+                                       (display-buffer-reuse-window
+                                        display-buffer-in-side-window)
+                                       (post-command-select-window . t)
+                                       (side . ,(or side 'right))
+                                       (window-width . ,(or width 0.25)))))
+
+(+pop '(major-mode . help-mode))
+(+pop '(major-mode . apropos-mode))
+(+pop '(major-mode . grep-mode))
+(+pop '(major-mode . Custom-mode))
+(+pop '(major-mode . occur-mode))
+(+pop '(major-mode . xref--xref-buffer-mode))
+(+pop '(this-command . help))
+(+pop '(this-command . customize))
+(+pop '(this-command . man))
+
+
+;; Buffer
+
+(defun +kill-other-buffers ()
+  "Kill all other buffers except the current one and essential buffers."
+  (interactive)
+  (let ((target-name '("*dashboard*"
+                       "*Help*"
+                       "*Ibuffer*"
+                       "*lsp-bridge-doc*"))
+        (target-mode '("Helpful"
+                       "Custom"
+                       "Magit"
+                       "Magit Process"
+                       "Flymake diagnostics"
+                       "Grep"
+                       "Backtrace"))
+        (killed-count 0))
+    (dolist (buf (buffer-list))
+      (unless (get-buffer-window buf t)
+        (let ((name (buffer-name buf))
+              (mode (buffer-local-value 'mode-name buf)))
+          (when (or (and (not (string-prefix-p "*" name)) ; keep `*' and ` ' by default
+                         (not (string-prefix-p " " name)))
+                    (member name target-name)             ; delete explicit ones
+                    (member mode target-mode))
+            (kill-buffer buf)
+            (cl-incf killed-count)
+            (message "Killed %s" name)))))
+    (message "Killed %d buffer(s)." killed-count)))
+
+(late!
+ (+spc
+   "b"   '(:ignore t :which-key "buffer")
+   "b b" '("switch"      . consult-buffer)
+   "b i" '("ibuffer"     . ibuffer)
+   "b k" '("kill this"   . kill-current-buffer)
+   "b l" '("last"        . mode-line-other-buffer)
+   "b K" '("kill others" . +kill-other-buffers)
+   "b n" '("next"        . next-buffer)
+   "b p" '("previous"    . previous-buffer)
+   "b r" '("revert"      . revert-buffer)
+   "o s" '("scratch"     . scratch-buffer)))
+
+
+;; Dashboard
+
+(use-package dashboard
+  :custom
+  (inhibit-startup-screen t)
+  (dashboard-center-content t)
+  (dashboard-vertically-center-content t)
+  (dashboard-display-icons-p t)
+  (dashboard-icon-type 'nerd-icons)
+  (dashboard-set-heading-icons t)
+  (dashboard-set-file-icons t)
+  (dashboard-items '((recents  . 10)
+                     (projects . 10)))
+
+  :hook
+  (window-size-change-functions . +schedule-dashboard-refresh)
+
+  :init
+  (defun +maybe-open-dashboard ()
+    (when (length< command-line-args 2)
+      (dashboard-open)
+      (when (buffer-live-p "*scratch*")
+        (kill-buffer "*scratch*"))
+      ))
+  (late! (+maybe-open-dashboard))
+
+  :config
+  (defun +dashboard-refresh ()
+    (with-current-buffer "*dashboard*"
+      (let ((inhibit-read-only t))
+        (dashboard-insert-startupify-lists t))))
+
+  (defvar +dashboard-resize-timer nil
+    "Idle timer for debounced dashboard refresh.")
+
+  (defun +schedule-dashboard-refresh (&optional _)
+    "Schedule dashboard refresh after resize."
+    (when +dashboard-resize-timer
+      (cancel-timer +dashboard-resize-timer))
+    (setq +dashboard-resize-timer
+          (run-with-idle-timer
+           0.5 nil
+           (lambda ()
+             (when (get-buffer "*dashboard*")
+               (+dashboard-refresh)))))))
+
+(late! (+spc "o d" '("dashboard"  . dashboard-open)))
+
+
+;; Directory
+
+(use-package dirvish
+  :custom
+  (delete-by-moving-to-trash t)
+  (dired-listing-switches "-alh --group-directories-first")
+  (dirvish-subtree-state-style 'nerd)
+  (dirvish-attributes '(nerd-icons vc-state file-size file-time))
+  (dirvish-side-attributes '(nerd-icons collapse vc-state file-size))
+  (dirvish-hide-details '(dirvish-side))
+  (dirvish-mode-line-height 24)
+
+  :init
+  (dirvish-override-dired-mode)
+
+  :config
+  (dirvish-side-follow-mode 1)
+  (put 'dired-find-alternate-file 'disabled nil)
+  (add-to-list 'dirvish-side-window-parameters '(+dirvish-side . t))
+
+  :hook
+  (dired-mode . dired-omit-mode))
+
+(use-package diredfl
+  :after dirvish
+  :hook
+  (dired-mode . diredfl-mode)
+  (dirvish-directory-view-mode . diredfl-mode))
+
+(defun +is-dirvish-side (&optional window)
+  "Returns t if WINDOW is `dirvish-side'."
+  (window-parameter window '+dirvish-side))
+
+(defun +dirvish-quit ()
+  "Dirvish q key."
+  (interactive)
+  (if (+is-dirvish-side)
+      (+last-focused-window)
+    (quit-window)))
+
+(defun +dirvish-open-file ()
+  "Open file in main window, or open directory in current window."
+  (interactive)
+  (if (not (+is-dirvish-side))
+      (call-interactively #'dired-find-alternate-file)
+    (let ((file (dired-get-file-for-visit)))
+      (if (file-directory-p file)
+          (call-interactively #'dired-find-alternate-file)
+        (progn
+          (select-window (get-mru-window nil t t))
+          (find-file file))))))
+
+(late!
+ (+spc
+   "f"   '(:ignore t :which-key "file")
+   "f f" '("find"         . find-file)
+   "f s" '("save"         . save-buffer)
+   "f r" '("recent files" . consult-recent-file)
+
+   "o o" '("dired"        . dired)
+   "o p" '("project view" . dirvish-side)
+
+   "p"   '(:ignore t :which-key "project")
+   "p c" '("compile"      . project-compile)
+   "p f" '("find file"    . project-find-file)
+   "p p" '("switch"       . project-switch-project))
+
+ (general-def
+   :keymaps 'dirvish-mode-map
+   :states '(normal motion)
+   "q"   #'+dirvish-quit
+   "TAB" #'dirvish-subtree-toggle
+   "H"   #'dirvish-subtree-up
+   "h"   #'dired-up-directory
+   "l"   #'+dirvish-open-file
+   "RET" #'+dirvish-open-file))
+
+
+;; Git
+
+(use-package magit
+  :commands (magit-status))
+
+(use-package diff-hl
+  :config
+  ;; https://github.com/dgutov/diff-hl/issues/116#issuecomment-1573253134
+  (let* ((width 2)
+         (bitmap (vector (1- (expt 2 width)))))
+    (define-fringe-bitmap '+diff-hl-bitmap bitmap 1 width '(top t)))
+  (setq diff-hl-fringe-bmp-function (lambda (type pos) '+diff-hl-bitmap))
+
+  (set-face-background 'diff-hl-insert nil)
+  (set-face-background 'diff-hl-change nil)
+  (set-face-background 'diff-hl-delete nil)
+  :hook
+  (+late . global-diff-hl-mode))
+
+(use-package git-modes
+  :mode
+  (("\\.gitignore\\'"     . gitignore-mode)
+   ("\\.gitconfig\\'"     . gitconfig-mode)
+   ("\\.gitmodules\\'"    . gitconfig-mode)
+   ("\\.gitattributes\\'" . gitattributes-mode)))
+
+(late!
+ (+spc
+   "g"   '(:ignore t :which-key "git")
+   "g b" '("blame" . magit-blame)
+   "g d" '("diff"  . magit-diff)
+   "g g" '("git"   . magit-status)
+   "g h" '("hunk"  . diff-hl-show-hunk)))
+
+
+
+(use-package helpful
+  :commands (helpful-at-point)
+  :config
+  (+pop '(major-mode . helpful-mode)))
+
+
+;; Terminal
+
+(use-package vterm
+  :commands (vterm vterm-other-window)
+  :config
+  (+pop '(this-command . vterm-other-window)))
+
+(late!
+ (+spc
+   "o t" '("terminal"      . vterm-other-window)
+   "o T" '("terminal here" . vterm)))
+
+
+;; Discord Rich Presence
+
+(use-package elcord
+  :custom
+  (elcord-use-major-mode-as-main-icon t)
+  :hook
+  (+late . elcord-mode))
+
+(late!
+ (+spc "t d" '("discord rich presence" . elcord-mode)))
+
+
+;; Undo/History
+
+(setq history-length 1000
+      savehist-autosave-interval 60
+      savehist-additional-variables '(search-ring
+                                      regexp-search-ring
+                                      extended-command-history))
+
+(late! (save-place-mode)
+       (savehist-mode))
+
+(use-package undo-fu
+  :custom
+  (undo-limit 256000)
+  (undo-strong-limit 2000000)
+  (undo-outer-limit 36000000))
+
+(use-package undo-fu-session
+  :after undo-fu
+  :custom
+  (undo-fu-session-compression 'zst)
+  :hook
+  (+late . global-undo-fu-session-mode))
+
+
+;; Evil
+
+(use-package evil
+  :after undo-fu
+  :custom
+  (evil-want-keybinding nil)
+  (evil-undo-system 'undo-fu)
+  (evil-respect-visual-line-mode t)
+
+  :config
+  (evil-mode 1))
+
+(use-package evil-collection
+  :after evil
+  :init
+  (evil-collection-init))
+
+(use-package evil-surround
+  :after evil
+  :config
+  (global-evil-surround-mode 1))
+
+(use-package evil-snipe
+  :after evil
+  :config
+  (evil-snipe-mode 1)
+  (evil-snipe-override-mode 1))
+
+(use-package evil-easymotion
+  :after evil
+  :config
+  (evilem-default-keybindings "g s"))
+
+(use-package evil-mc
+  :after evil
+  :config
+  (global-evil-mc-mode 1))
+
+(use-package evil-nerd-commenter
+  :after evil
+  :init
+  (evilnc-default-hotkeys))
+
+(late!
+ (+visual
+   "A" #'evil-mc-make-cursor-in-visual-selection-end
+   "I" #'evil-mc-make-cursor-in-visual-selection-beg))
+
+
+;; Languages
+
+(use-package treesit-auto
+  :custom
+  (treesit-auto-install 'prompt)
+  :config
+  (treesit-auto-add-to-auto-mode-alist 'all)
+  (global-treesit-auto-mode 1))
+
 (use-package markdown-mode :mode "\\.md\\'")
 (use-package fish-mode     :mode "\\.fish\\'")
 
@@ -61,447 +755,13 @@
   :ensure (:host github :repo "beancount/beancount-mode")
   :mode ("\\.beancount\\'" . beancount-mode))
 
-(use-package nerd-icons :defer t)
-(use-package apheleia :defer t)
-
-(use-package emacs
-  :ensure nil
-  :custom
-  (use-dialog-box nil)
-  (confirm-kill-emacs #'yes-or-no-p)
-
-  (custom-file (expand-file-name "custom.el" user-emacs-directory))
-
-  (display-line-numbers-grow-only t)
-  (display-line-numbers-width-start t)
-  (display-line-numbers-type 'relative)
-
-  ;; disable annoying bell sound
-  (ring-bell-function 'ignore)
-
-  ;; less jumpy scroll
-  (scroll-step 1)                     ; scroll one line at a time
-  (scroll-margin 2)                   ; start scrolling when 2 lines from bottom
-  (scroll-conservatively 100000)      ; never recenter automatically
-  (scroll-preserve-screen-position t) ; keep point position when scrolling
-  (auto-window-vscroll nil)
-
-  (window-divider-default-bottom-width 5)
-  (window-divider-default-right-width 5)
-
-  (tab-always-indent 'complete)
-  (truncate-lines t)
-  (tab-width 4)
-  (standard-indent 4)
-  (whitespace-style '(face tabs tab-mark
-                           spaces space-mark
-                           indentation
-                           space-after-tab space-before-tab
-                           trailing
-                           missing-newline-at-eof))
-
-  ;; disable backup `.#' and lockfiles `~'
-  (create-lockfiles nil)
-  (make-backup-files nil)
-
-  (which-key-idle-delay 0.3)
-  (which-key-sort-order 'which-key-key-order-alpha)
-  (which-key-sort-uppercase-first nil)
-  (which-key-dont-use-unicode nil)
-  (which-key-min-display-lines 5)
-
-  (history-length 1000)
-  (savehist-autosave-interval 60)
-  (savehist-additional-variables '(search-ring
-                                   regexp-search-ring
-                                   extended-command-history))
-
-  (read-extended-command-predicate #'command-completion-default-include-p)
-
-  ;; use custom doom-modeline segment, see below
-  (which-func-display nil)
-  :config
-  (set-face-attribute 'default nil
-                      :family "JetBrainsMono NF"
-                      :height 105)
-  (set-face-attribute 'fixed-pitch nil :family "JetBrainsMono NF")
-
-  (fset #'yes-or-no-p #'y-or-n-p)
-  (setq-default indent-tabs-mode nil)
-
-  ;; Custom functions/hooks for persisting/loading frame geometry upon save/load
-  ;; https://www.reddit.com/r/emacs/comments/4ermj9/comment/d237n0i
-  (defun +save-frameg ()
-    "Gets the current frame's geometry and saves to `frameg.el'."
-    (let ((frameg-left (frame-parameter (selected-frame) 'left))
-          (frameg-top (frame-parameter (selected-frame) 'top))
-          (frameg-width (frame-parameter (selected-frame) 'width))
-          (frameg-height (frame-parameter (selected-frame) 'height))
-          (frameg-fullscreen (frame-parameter (selected-frame) 'fullscreen))
-          (frameg-file (expand-file-name "frameg.el" user-emacs-directory)))
-      (with-temp-buffer
-        ;; Turn off backup for this file
-        (make-local-variable 'make-backup-files)
-        (setq make-backup-files nil)
-        (insert
-         ";;; This file stores the previous emacs frame's geometry. -*- lexical-binding: t; -*-\n"
-         ";;; Last generated " (current-time-string) ".\n"
-         "(setq initial-frame-alist\n"
-         " '("
-         (format " (top . %d)\n" (max frameg-top 0))
-         (format " (left . %d)\n" (max frameg-left 0))
-         (format " (width . %d)\n" (max frameg-width 0))
-         (format " (height . %d)\n" (max frameg-height 0))
-         (format " (fullscreen . %s)))\n" frameg-fullscreen))
-        (when (file-writable-p frameg-file)
-          (write-file frameg-file)))))
-
-  (defun +load-frameg ()
-    "Loads `frameg.el' which should load the previous frame's geometry."
-    (let ((frameg-file (expand-file-name "frameg.el" user-emacs-directory)))
-      (when (file-readable-p frameg-file)
-        (load-file frameg-file))))
-
-  ;; Special work to do ONLY when there is a window system being used
-  (when window-system
-    (add-hook 'after-init-hook '+load-frameg)
-    (add-hook 'kill-emacs-hook '+save-frameg))
-
-  :hook
-  (prog-mode . display-line-numbers-mode)
-  (conf-mode . display-line-numbers-mode)
-  (text-mode . display-line-numbers-mode)
-  (prog-mode . which-function-mode)
-  (before-save . delete-trailing-whitespace)
-  (+late . save-place-mode)
-  (+late . savehist-mode)
-  (+late . global-hl-line-mode)
-  (+late . electric-pair-mode)
-  (+late . which-key-mode)
-  (+late . window-divider-mode))
-
-(use-package doom-themes
-  :config
-  (load-theme 'doom-one t))
-
-(use-package doom-modeline
-  :custom
-  (doom-modeline-buffer-file-name-style 'relative-from-project)
-  (doom-modeline-buffer-encoding 'nondefault)
-  :config
-  (doom-modeline-def-segment +breadcrumb
-    (when-let* ((_ which-func-mode)
-                (func (eval (plist-get which-func-current :eval)))
-                (_ (and func (not (string= func "n/a"))))
-                (func (if (length> func 30)
-                          (concat doom-modeline-ellipsis (substring func (- (length func) 29)) )
-                        func))
-                (spc (doom-modeline-spc))
-                (face (doom-modeline-face 'which-func)))
-      (concat spc
-              (propertize func 'face face)
-              spc)))
-
-  (doom-modeline-def-segment +lsp
-    (when-let* ((_ lsp-bridge-mode)
-                (sep (doom-modeline-spc)))
-      (concat sep
-              (lsp-bridge--mode-line-format)
-              sep)))
-
-  (doom-modeline-def-modeline '+modeline
-    '(eldoc bar window-state workspace-name window-number modals matches follow buffer-info remote-host buffer-position word-count parrot selection-info)
-    '(+breadcrumb compilation objed-state misc-info project-name persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding +lsp major-mode process vcs check time))
-
-  (add-hook 'doom-modeline-mode-hook (lambda () (doom-modeline-set-modeline '+modeline 'default)))
-  :hook
-  (+late . doom-modeline-mode))
-
-(use-package hide-mode-line
-  :commands (hide-mode-line-mode))
-
-(use-package solaire-mode
-  :hook
-  (+late . solaire-global-mode))
-
-(use-package vi-tilde-fringe
-  :hook
-  (+late . global-vi-tilde-fringe-mode))
-
-(use-package rainbow-delimiters
-  :hook
-  (prog-mode . rainbow-delimiters-mode))
-
-(use-package symbol-overlay
-  :hook
-  (prog-mode . symbol-overlay-mode))
-
-(use-package transient
-  :custom
-  (transient-mode-line-format nil))
-
-(setq +posframe-y-offset 100
-      +posframe-border-color "#bbc2cf"
-      +posframe-params '((left-fringe 10)
-                         (right-fringe 10)))
-
-(defun +posframe-poshandler (info)
-  "Custom poshandler, INFO."
-  (let ((top-center (posframe-poshandler-frame-top-center info)))
-    (cons (car top-center) +posframe-y-offset)))
-
-(use-package which-key-posframe
-  :custom
-  (which-key-posframe-poshandler #'+posframe-poshandler)
-  (which-key-posframe-parameters +posframe-params)
-  ;; (which-key-posframe-parameters `(,@+posframe-params
-  ;;                                  (z-group . above)))
-  :config
-  (set-face-background 'which-key-posframe-border +posframe-border-color)
-
-  (define-advice which-key-posframe--show-buffer (:after (&rest _) raise)
-    (raise-frame (posframe--find-existing-posframe which-key--buffer)))
-  :hook
-  (+late . which-key-posframe-mode))
-
-(use-package transient-posframe
-  :custom
-  (transient-posframe-poshandler #'+posframe-poshandler)
-  (transient-posframe-parameters +posframe-params)
-  :config
-  (set-face-background 'transient-posframe-border +posframe-border-color)
-  :hook
-  (+late . transient-posframe-mode))
-
-(use-package vertico-posframe
-  :custom
-  (vertico-posframe-border-width 1)
-  (vertico-posframe-poshandler #'+posframe-poshandler)
-  (vertico-posframe-parameters +posframe-params)
-  (vertico-multiform-commands '((t posframe)))
-  :config
-  (define-advice vertico-posframe--get-border-color (:override () all-same-color)
-    +posframe-border-color))
-
-(use-package mini-frame
-  :custom
-  (mini-frame-detach-on-hide nil)
-  (mini-frame-show-parameters `((left . 0.5)
-                                (top . ,+posframe-y-offset)
-                                (width . 0.6)
-                                (no-accept-focus . t)
-                                (child-frame-border-width . 1)
-                                (background-color . "#21242b")))
-  :config
-  (add-to-list 'mini-frame-advice-functions 'map-y-or-n-p)
-  (add-to-list 'mini-frame-ignore-functions 'completing-read)
-  (add-to-list 'mini-frame-ignore-commands 'evil-ex)
-  (set-face-background 'child-frame-border +posframe-border-color)
-  :hook
-  (+late . mini-frame-mode))
-
-(defun +pop (pred &optional side width)
-  "Add `display-buffer-alist' side window rule for PRED with SIDE and WIDTH."
-  (add-to-list 'display-buffer-alist `(,pred
-                                       (display-buffer-reuse-window
-                                        display-buffer-in-side-window)
-                                       (post-command-select-window . t)
-                                       (side . ,(or side 'right))
-                                       (window-width . ,(or width 0.25)))))
-
-(+pop '(major-mode . help-mode))
-(+pop '(major-mode . apropos-mode))
-(+pop '(major-mode . grep-mode))
-(+pop '(major-mode . Custom-mode))
-(+pop '(this-command . help))
-(+pop '(this-command . customize))
-(+pop '(this-command . man))
-
-;; (use-package highlight-indent-guides
-;;   :custom
-;;   (highlight-indent-guides-method 'character)
-;;   (highlight-indent-guides-responsive 'top)
-
-;;   :hook
-;;   (prog-mode . highlight-indent-guides-mode))
-
-(use-package dashboard
-  :custom
-  (inhibit-startup-screen t)
-  (dashboard-center-content t)
-  (dashboard-vertically-center-content t)
-  (dashboard-display-icons-p t)
-  (dashboard-icon-type 'nerd-icons)
-  (dashboard-set-heading-icons t)
-  (dashboard-set-file-icons t)
-  (dashboard-items '((recents  . 10)
-                     (projects . 10)))
-
-  :hook
-  (window-size-change-functions . +schedule-dashboard-refresh)
-
-  :init
-  (defun +maybe-open-dashboard ()
-    (when (length< command-line-args 2)
-      (dashboard-open)
-      (kill-buffer "*scratch*")))
-  (add-hook '+late-hook #'+maybe-open-dashboard)
-
-  :config
-  (defun +dashboard-refresh ()
-    (with-current-buffer "*dashboard*"
-      (let ((inhibit-read-only t))
-        (dashboard-insert-startupify-lists t))))
-
-  (defvar +dashboard-resize-timer nil
-    "Idle timer for debounced dashboard refresh.")
-
-  (defun +schedule-dashboard-refresh (&optional _)
-    "Schedule dashboard refresh after resize."
-    (when +dashboard-resize-timer
-      (cancel-timer +dashboard-resize-timer))
-    (setq +dashboard-resize-timer
-          (run-with-idle-timer
-           0.5 nil
-           (lambda ()
-             (when (get-buffer "*dashboard*")
-               (+dashboard-refresh)))))))
-
-(use-package dirvish
-  :custom
-  (delete-by-moving-to-trash t)
-  (dired-listing-switches "-alh --group-directories-first")
-  (dirvish-subtree-state-style 'nerd)
-  (dirvish-attributes '(nerd-icons vc-state file-size file-time))
-  (dirvish-side-attributes '(nerd-icons collapse vc-state file-size))
-  (dirvish-hide-details '(dirvish-side))
-  (dirvish-mode-line-height 24)
-
-  :init
-  (dirvish-override-dired-mode)
-
-  :config
-  (dirvish-side-follow-mode 1)
-  (put 'dired-find-alternate-file 'disabled nil)
-  (add-to-list 'dirvish-side-window-parameters '(+dirvish-side . t))
-
-  :hook
-  (dired-mode . dired-omit-mode))
-
-(use-package diredfl
-  :after dirvish
-  :hook
-  (dired-mode . diredfl-mode)
-  (dirvish-directory-view-mode . diredfl-mode))
-
-(use-package ace-window
-  :commands (ace-window)
-  :custom
-  (aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l)))
-
-(use-package magit
-  :commands (magit-status))
-
-(use-package diff-hl
-  :config
-  ;; https://github.com/dgutov/diff-hl/issues/116#issuecomment-1573253134
-  (let* ((width 2)
-         (bitmap (vector (1- (expt 2 width)))))
-    (define-fringe-bitmap '+diff-hl-bitmap bitmap 1 width '(top t)))
-  (setq diff-hl-fringe-bmp-function (lambda (type pos) '+diff-hl-bitmap))
-
-  (set-face-background 'diff-hl-insert nil)
-  (set-face-background 'diff-hl-change nil)
-  (set-face-background 'diff-hl-delete nil)
-  :hook
-  (+late . global-diff-hl-mode))
-
-(use-package git-modes
-  :mode
-  (("\\.gitignore\\'"     . gitignore-mode)
-   ("\\.gitconfig\\'"     . gitconfig-mode)
-   ("\\.gitmodules\\'"    . gitconfig-mode)
-   ("\\.gitattributes\\'" . gitattributes-mode)))
-
-(use-package helpful
-  :commands (helpful-at-point)
-  :config
-  (+pop '(major-mode . helpful-mode)))
-
-(use-package vterm
-  :commands (vterm vterm-other-window)
-  :config
-  (+pop '(this-command . vterm-other-window)))
-
-;; discord rich presence
-(use-package elcord
-  :custom
-  (elcord-use-major-mode-as-main-icon t)
-  :hook
-  (+late . elcord-mode))
-
-(use-package undo-fu
-  :custom
-  (undo-limit 256000)
-  (undo-strong-limit 2000000)
-  (undo-outer-limit 36000000))
-
-(use-package undo-fu-session
-  :after undo-fu
-  :custom
-  (undo-fu-session-compression 'zst)
-  :hook
-  (+late . global-undo-fu-session-mode))
-
-(use-package evil
-  :after undo-fu
-  :custom
-  (evil-want-keybinding nil)
-  (evil-undo-system 'undo-fu)
-  (evil-respect-visual-line-mode t)
-
-  :config
-  (evil-mode 1))
-
-(use-package evil-collection
-  :after evil
-  :init
-  (evil-collection-init))
-
-(use-package evil-surround
-  :after evil
-  :config
-  (global-evil-surround-mode 1))
-
-(use-package evil-snipe
-  :after evil
-  :config
-  (evil-snipe-mode 1)
-  (evil-snipe-override-mode 1))
-
-(use-package evil-mc
-  :after evil
-  :config
-  (global-evil-mc-mode 1))
-
-(use-package evil-nerd-commenter
-  :after evil
-  :init
-  (evilnc-default-hotkeys))
-
-(use-package treesit-auto
-  :custom
-  (treesit-auto-install 'prompt)
-  :config
-  (treesit-auto-add-to-auto-mode-alist 'all)
-  (global-treesit-auto-mode 1))
+
+;; Editing Shortcuts
 
 (use-package combobulate
   :ensure (:host github :repo "mickeynp/combobulate")
   :hook
   (prog-mode . combobulate-mode))
-
-(use-package consult)
 
 (use-package embark
   :config
@@ -542,6 +802,34 @@
   (advice-add #'embark-completing-read-prompter
               :around #'embark-hide-which-key-indicator))
 
+(late! (+spc "a" '("act" . embark-act))
+       (general-def "M-e" #'embark-act))
+
+
+;; Completions
+
+(setq tab-always-indent 'complete
+      read-extended-command-predicate #'command-completion-default-include-p)
+
+(late! (electric-pair-mode))
+
+(use-package consult
+  :custom
+  (xref-show-xrefs-function #'consult-xref)
+  (xref-show-definitions-function #'consult-xref))
+
+(defun +consult-fd-with-dir ()
+  "Run `consult-fd` with universal argument to prompt for directory."
+  (interactive)
+  (let ((current-prefix-arg '(4))) ; simulate C-u
+    (call-interactively #'consult-ripgrep)))
+
+(defun +consult-ripgrep-with-dir ()
+  "Run `consult-ripgrep` with universal argument to prompt for directory."
+  (interactive)
+  (let ((current-prefix-arg '(4))) ; simulate C-u
+    (call-interactively #'consult-ripgrep)))
+
 (use-package embark-consult :after embark)
 
 (use-package vertico
@@ -574,6 +862,39 @@
   (completion-at-point-functions . cape-dabbrev)
   (completion-at-point-functions . cape-file))
 
+(use-package corfu
+  :custom
+  (corfu-auto t)
+  (corfu-auto-prefix 2)
+  :hook
+  (+late . global-corfu-mode))
+
+(use-package imenu-list
+  :custom
+  (imenu-list-auto-update nil))
+
+(use-package wgrep)
+
+(late!
+ (+spc
+   "s"   '(:ignore t :which-key "search")
+   "s b" '("buffer"       . consult-buffer)
+   "s e" '("error"        . consult-flymake)
+   "s f" '("fd project"   . consult-fd)
+   "s F" '("fd directory" . +consult-fd-with-dir)
+   "s i" '("imenu"        . consult-imenu)
+   "s l" '("line"         . consult-line)
+   "s L" '("line multi"   . consult-line-multi)
+   "s r" '("rg project"   . consult-ripgrep)
+   "s R" '("rg directory" . +consult-ripgrep-with-dir))
+
+ (general-def
+   :keymaps 'minibuffer-local-map
+   "M-a" #'marginalia-cycle))
+
+
+;; Debugging
+
 (use-package flymake
   :ensure nil
   :config
@@ -596,23 +917,6 @@
   :hook
   (prog-mode . flymake-mode))
 
-;; FIXME: https://github.com/konrad1977/flyover/issues/17
-;; (use-package flyover
-;;   :after (flymake)
-;;   :ensure (:host github :repo "konrad1977/flyover")
-;;   :custom
-;;   (flyover-checkers '(flymake)))
-
-(use-package hl-todo
-  :custom
-  (hl-todo-highlight-punctuation ":")
-  (hl-todo-keyword-faces '(("TODO" warning bold)
-                           ("FIXME" error bold)))
-  :config
-  (add-hook 'flymake-diagnostic-functions #'hl-todo-flymake)
-  :hook
-  (+late . global-hl-todo-mode))
-
 (use-package dape
   :commands (dape)
   :custom
@@ -623,12 +927,16 @@
   :config
   (dape-breakpoint-global-mode 1))
 
-(use-package corfu
-  :custom
-  (corfu-auto t)
-  (corfu-auto-prefix 2)
-  :hook
-  (+late . global-corfu-mode))
+(late!
+ (+spc
+   "d"   '(:keymap dape-global-map :package dape :which-key "dape")
+   "o e" '("error" . flymake-show-buffer-diagnostics))
+ (+normal
+   "] e" #'flymake-goto-next-error
+   "[ e" #'flymake-goto-prev-error))
+
+
+;; LSP
 
 (use-package lsp-bridge
   :after (yasnippet markdown-mode orderless)
@@ -662,8 +970,10 @@
   ;; don't kill match buffers when quiting reference search
   (lsp-bridge-ref-kill-temp-buffer-p nil)
 
+  (lsp-bridge-imenu-function 'consult-imenu)
+
   (acm-enable-capf t)
-  (acm-enable-icon nil)
+  (acm-enable-icon t)
   (acm-enable-tabnine nil)
   (acm-candidate-match-function #'orderless-flex)
 
@@ -689,11 +999,17 @@
 
   (define-advice lsp-bridge--enable (:after () disable-corfu)
     "Disable corfu-mode when lsp-bridge is enabled."
-    (corfu-mode -1))
+    (corfu-mode -1)
+    (lsp-bridge-breadcrumb-mode 1)
+    (when (+has-lsp)
+      (lsp-bridge-semantic-tokens-mode 1)))
 
   (define-advice lsp-bridge--disable (:after () enable-corfu)
     "Re-enable corfu-mode when lsp-bridge is disabled."
-    (corfu-mode 1))
+    (corfu-mode 1)
+    (lsp-bridge-breadcrumb-mode -1)
+    (when lsp-bridge-semantic-tokens-mode
+      (lsp-bridge-semantic-tokens-mode -1)))
 
   (defvar +lsp-bridge-doc-mode-map (make-sparse-keymap))
   (define-minor-mode +lsp-bridge-doc-mode
@@ -727,17 +1043,6 @@
   (and (bound-and-true-p lsp-bridge-mode)
        (lsp-bridge-has-lsp-server-p)))
 
-(defun +format-buffer ()
-  "Format buffer using apheleia or lsp-bridge."
-  (interactive)
-  (if (+has-lsp)
-      (progn
-        (call-interactively #'lsp-bridge-code-format)
-        (message "Formatted using lsp-bridge"))
-    (progn
-      (call-interactively #'apheleia-format-buffer)
-      (message "Formatted using apheleia"))))
-
 (defun +show-documentation ()
   "Show documentation at point."
   (interactive)
@@ -757,264 +1062,58 @@
   "Show references at point."
   (interactive)
   (if (+has-lsp)
-      (call-interactively #'lsp-bridge-find-references)
+      (call-interactively #'lsp-bridge-xref-find-references)
     (call-interactively #'xref-find-references)))
 
-(defun +open-config ()
-  "Open Emacs configuration."
+(defun +show-symbols ()
+  "Show symbols in buffer."
   (interactive)
-  (find-file (read-file-name "Find file in config: " user-emacs-directory)))
+  (if (+has-lsp)
+      (call-interactively #'lsp-bridge-imenu)
+    (call-interactively #'consult-imenu)))
 
-(defun +kill-other-buffers ()
-  "Kill all other buffers except the current one and essential buffers."
+(late!
+ (+spc
+   "c a" '("action"        . lsp-bridge-code-action)
+   "c r" '("rename symbol" . lsp-bridge-rename)
+   "c s" '("symbol list"   . consult-imenu)
+   "t l" '("lsp"           . lsp-bridge-mode))
+ (+normal
+   "K"   #'+show-documentation
+   "g d" #'+go-to-def
+   "g r" #'+go-to-ref))
+
+
+;; Formatting
+
+(setq truncate-lines t
+      tab-width 4
+      standard-indent 4
+      whitespace-style '(face tabs tab-mark
+                              spaces space-mark
+                              indentation
+                              space-after-tab space-before-tab
+                              trailing
+                              missing-newline-at-eof))
+
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
+
+(use-package apheleia :defer t)
+
+(defun +format-buffer ()
+  "Format buffer using apheleia or lsp-bridge."
   (interactive)
-  (let ((target-name '("*dashboard*"
-                       "*Help*"
-                       "*Ibuffer*"
-                       "*lsp-bridge-doc*"))
-        (target-mode '("Helpful"
-                       "Custom"
-                       "Magit"
-                       "Magit Process"
-                       "Flymake diagnostics"
-                       "Grep"
-                       "Backtrace"))
-        (killed-count 0))
-    (dolist (buf (buffer-list))
-      (unless (get-buffer-window buf t)
-        (let ((name (buffer-name buf))
-              (mode (buffer-local-value 'mode-name buf)))
-          (when (or (and (not (string-prefix-p "*" name)) ; keep `*' and ` ' by default
-                         (not (string-prefix-p " " name)))
-                    (member name target-name)             ; delete explicit ones
-                    (member mode target-mode))
-            (kill-buffer buf)
-            (cl-incf killed-count)
-            (message "Killed %s" name)))))
-    (message "Killed %d buffer(s)." killed-count)))
+  (if (+has-lsp)
+      (progn
+        (call-interactively #'lsp-bridge-code-format)
+        (message "Formatted using lsp-bridge"))
+    (progn
+      (call-interactively #'apheleia-format-buffer)
+      (message "Formatted using apheleia"))))
 
-(defun +reload-init ()
-  "Reload Emacs init.el."
-  (interactive)
-  (load-file (expand-file-name "init.el" user-emacs-directory))
-  (message "init.el reloaded!"))
+(late! (+spc "c f" '("format" . +format-buffer)))
 
-(defun +last-focused-window ()
-  "Go to the last focused window."
-  (interactive)
-  (let ((win (get-mru-window t t t)))
-    (unless win (error "Last window not found"))
-    (let ((frame (window-frame win)))
-      (select-frame-set-input-focus frame)
-      (select-window win))))
-
-(defun +is-dirvish-side (&optional window)
-  "Returns t if WINDOW is `dirvish-side'."
-  (window-parameter window '+dirvish-side))
-
-(defun +dirvish-quit ()
-  "Dirvish q key."
-  (interactive)
-  (if (+is-dirvish-side)
-      (+last-focused-window)
-    (quit-window)))
-
-(defun +dirvish-open-file ()
-  "Open file in main window, or open directory in current window."
-  (interactive)
-  (if (not (+is-dirvish-side))
-      (call-interactively #'dired-find-alternate-file)
-    (let ((file (dired-get-file-for-visit)))
-      (if (file-directory-p file)
-          (call-interactively #'dired-find-alternate-file)
-        (progn
-          (select-window (get-mru-window nil t t))
-          (find-file file))))))
-
-(defun +split-window-left ()
-  "Split window to the left, focus the left window."
-  (interactive)
-  (call-interactively #'evil-window-vsplit))
-
-(defun +split-window-right ()
-  "Split window to the right, focus the right window."
-  (interactive)
-  (call-interactively #'evil-window-vsplit)
-  (call-interactively #'evil-window-right))
-
-(defun +split-window-up ()
-  "Split window to the up, focus the up window."
-  (interactive)
-  (call-interactively #'evil-window-split))
-
-(defun +split-window-down ()
-  "Split window to the down, focus the down window."
-  (interactive)
-  (call-interactively #'evil-window-split)
-  (call-interactively #'evil-window-down))
-
-(defun +window-increase-width ()
-  "Increase window width."
-  (interactive)
-  (if (+is-dirvish-side)
-      (call-interactively #'dirvish-side-increase-width)
-    (call-interactively #'evil-window-increase-width)))
-
-(defun +window-decrease-width ()
-  "Decrease window width."
-  (interactive)
-  (if (+is-dirvish-side)
-      (call-interactively #'dirvish-side-decrease-width)
-    (call-interactively #'evil-window-decrease-width)))
-
-(defun +consult-fd-with-dir ()
-  "Run `consult-fd` with universal argument to prompt for directory."
-  (interactive)
-  (let ((current-prefix-arg '(4))) ; simulate C-u
-    (call-interactively #'consult-ripgrep)))
-
-(defun +consult-ripgrep-with-dir ()
-  "Run `consult-ripgrep` with universal argument to prompt for directory."
-  (interactive)
-  (let ((current-prefix-arg '(4))) ; simulate C-u
-    (call-interactively #'consult-ripgrep)))
-
-(use-package general
-  :config
-  (global-unset-key (kbd "C-SPC"))
-
-  (general-def
-    :states '(normal visual motion emacs)
-    :keymaps 'override
-    :prefix "SPC"
-    :global-prefix "C-SPC"
-    "b"     '(:ignore t :which-key "buffer")
-    "b b"   '("switch"                . consult-buffer)
-    "b i"   '("ibuffer"               . ibuffer)
-    "b k"   '("kill this"             . kill-current-buffer)
-    "b l"   '("last"                  . mode-line-other-buffer)
-    "b K"   '("kill others"           . +kill-other-buffers)
-    "b n"   '("next"                  . next-buffer)
-    "b p"   '("previous"              . previous-buffer)
-    "b r"   '("revert"                . revert-buffer)
-
-    "d"     '(:keymap dape-global-map :package dape :which-key "dape")
-
-    "e"     '(:ignore t :which-key "emacs")
-    "e c"   '("open config"           . +open-config)
-    "e r"   '("reload init.el"        . +reload-init)
-    "e R"   '("restart"               . restart-emacs)
-    "e q"   '("quit"                  . save-buffers-kill-emacs)
-
-    "f"     '(:ignore t :which-key "file")
-    "f f"   '("find"                  . find-file)
-    "f s"   '("save"                  . save-buffer)
-    "f r"   '("recent files"          . consult-recent-file)
-
-    "g"     '(:ignore t :which-key "git")
-    "g b"   '("blame"                 . magit-blame)
-    "g d"   '("diff"                  . magit-diff)
-    "g g"   '("git"                   . magit-status)
-    "g h"   '("hunk"                  . diff-hl-show-hunk)
-
-    "c"     '(:ignore t :which-key "code")
-    "c a"   '("action"                . lsp-bridge-code-action)
-    "c c"   '("compile"               . compile)
-    "c d"   '("definition"            . +go-to-def)
-    "c D"   '("definition"            . +go-to-ref)
-    "c f"   '("format"                . +format-buffer)
-    "c r"   '("rename symbol"         . lsp-bridge-rename)
-    "c s"   '("symbol list"           . consult-imenu)
-
-    "o"     '(:ignore t :which-key "open")
-    "o d"   '("dashboard"             . dashboard-open)
-    "o e"   '("error"                 . flymake-show-buffer-diagnostics)
-    "o o"   '("dired"                 . dired)
-    "o p"   '("project view"          . dirvish-side)
-    "o s"   '("scratch"               . scratch-buffer)
-    "o t"   '("terminal"              . vterm-other-window)
-    "o T"   '("terminal here"         . vterm)
-
-    "p"     '(:ignore t :which-key "project")
-    "p c"   '("compile"               . project-compile)
-    "p f"   '("find file"             . project-find-file)
-    "p p"   '("switch"                . project-switch-project)
-
-    "s"     '(:ignore t :which-key "search")
-    "s b"   '("buffer"                . consult-buffer)
-    "s e"   '("error"                 . consult-flymake)
-    "s f"   '("fd project"            . consult-fd)
-    "s F"   '("fd directory"          . +consult-fd-with-dir)
-    "s i"   '("imenu"                 . consult-imenu)
-    "s l"   '("line"                  . consult-line)
-    "s L"   '("line multi"            . consult-line-multi)
-    "s r"   '("rg project"            . consult-ripgrep)
-    "s R"   '("rg directory"          . +consult-ripgrep-with-dir)
-
-    "w"     '(:ignore t :which-key "window")
-    "w h"   '("left"                  . evil-window-left)
-    "w H"   '("split left"            . +split-window-left)
-    "w j"   '("down"                  . evil-window-down)
-    "w J"   '("split down"            . +split-window-down)
-    "w k"   '("up"                    . evil-window-up)
-    "w K"   '("split up"              . +split-window-up)
-    "w l"   '("right"                 . evil-window-right)
-    "w L"   '("split right"           . +split-window-right)
-    "w m"   '("maximize"              . delete-other-windows)
-    "w q"   '("kill window"           . delete-window)
-    "w w"   '("switch window"         . ace-window)
-    "w ="   '("increase width"        . +window-increase-width)
-    "w -"   '("decrease width"        . +window-decrease-width)
-    "w +"   '("increase height"       . +window-increase-height)
-    "w _"   '("decrease height"       . +window-decrease-height)
-
-    "t"     '(:ignore t :which-key "toggle")
-    "t d"   '("discord rich presence" . elcord-mode)
-    "t l"   '("lsp"                   . lsp-bridge-mode)
-    "t m"   '("menu bar"              . menu-bar-mode)
-    "t n"   '("line numbers"          . display-line-numbers-mode)
-    "t w"   '("wrap"                  . visual-line-mode)
-    "t SPC" '("whitespace"            . whitespace-mode)
-    )
-
-  (general-def
-    "M-<f4>" #'+quit-emacs
-    "M-e"    #'embark-act
-    )
-
-  (general-def
-    :states 'normal
-    :keymaps 'override
-    "K"   #'+show-documentation
-    "g d" #'+go-to-def
-    "g r" #'+go-to-ref
-    "] e" #'flymake-goto-next-error
-    "[ e" #'flymake-goto-prev-error
-    )
-
-  (general-def
-    :states 'visual
-    :keymaps 'override
-    "A" #'evil-mc-make-cursor-in-visual-selection-end
-    "I" #'evil-mc-make-cursor-in-visual-selection-beg
-    )
-
-  (general-def
-    :keymaps 'dirvish-mode-map
-    :states '(normal motion)
-    "q"   #'+dirvish-quit
-    "TAB" #'dirvish-subtree-toggle
-    "H"   #'dirvish-subtree-up
-    "h"   #'dired-up-directory
-    "l"   #'+dirvish-open-file
-    "RET" #'+dirvish-open-file
-    )
-
-  (general-def
-    :keymaps 'minibuffer-local-map
-    "M-a" #'marginalia-cycle
-    )
-  )
+
 
 (+load "init-private")
 
