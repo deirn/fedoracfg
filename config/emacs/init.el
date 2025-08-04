@@ -35,6 +35,11 @@
   "Delay running BODY until after startup."
   `(add-hook '+late-hook #'(lambda () ,@body)))
 
+(defmacro after! (package &rest body)
+  "Delay running BODY until PACKAGE loaded."
+  (declare (indent defun))
+  `(with-eval-after-load ',package ,@body))
+
 
 ;; Key Bindings Setup
 
@@ -571,6 +576,12 @@
 
 
 ;; Git
+
+(use-package ediff
+  :ensure nil
+  :custom
+  (ediff-window-setup-function #'ediff-setup-windows-plain)
+  (ediff-split-window-function #'split-window-horizontally))
 
 (use-package magit
   :commands (magit-status))
