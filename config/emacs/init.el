@@ -824,6 +824,13 @@
 
 (late! (electric-pair-mode))
 
+(use-package xref
+  :ensure nil
+  :config
+  (define-advice xref--show-xrefs (:before (&rest _) evil-jump-list)
+    "Add to evil jump list before showing xrefs."
+    (evil-set-jump)))
+
 (use-package consult
   :custom
   (xref-show-xrefs-function #'consult-xref)
@@ -1012,15 +1019,17 @@
     "Disable corfu-mode when lsp-bridge is enabled."
     (corfu-mode -1)
     (lsp-bridge-breadcrumb-mode 1)
-    (when (+has-lsp)
-      (lsp-bridge-semantic-tokens-mode 1)))
+    ;; (when (+has-lsp)
+    ;;   (lsp-bridge-semantic-tokens-mode 1))
+    )
 
   (define-advice lsp-bridge--disable (:after () enable-corfu)
     "Re-enable corfu-mode when lsp-bridge is disabled."
     (corfu-mode 1)
     (lsp-bridge-breadcrumb-mode -1)
-    (when lsp-bridge-semantic-tokens-mode
-      (lsp-bridge-semantic-tokens-mode -1)))
+    ;; (when lsp-bridge-semantic-tokens-mode
+    ;;   (lsp-bridge-semantic-tokens-mode -1))
+    )
 
   (defvar +lsp-bridge-doc-mode-map (make-sparse-keymap))
   (define-minor-mode +lsp-bridge-doc-mode
