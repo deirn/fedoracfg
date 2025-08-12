@@ -352,12 +352,12 @@
   :custom
   (transient-mode-line-format nil))
 
-(when (display-graphic-p)
-  (setq +posframe-y-offset 100
-        +posframe-border-color "#bbc2cf"
-        +posframe-params '((left-fringe 10)
+(defvar +posframe-y-offset 100)
+(defvar +posframe-border-color "#bbc2cf")
+(defvar +posframe-params '((left-fringe 10)
                            (right-fringe 10)))
 
+(when (display-graphic-p)
   (defun +posframe-poshandler (info)
     (let ((top-center (posframe-poshandler-frame-top-center info)))
       (cons (car top-center) +posframe-y-offset)))
@@ -1001,6 +1001,22 @@
   :hook
   (prog-mode . flymake-mode))
 
+(use-package flymake-popon
+  :ensure (:repo "https://codeberg.org/akib/emacs-flymake-popon.git")
+  :custom
+  (flymake-popon-width 100)
+  :config
+  (set-face-foreground 'flymake-popon-posframe-border "#323232")
+  (setq flymake-popon-posframe-extra-arguments (plist-put flymake-popon-posframe-extra-arguments :background-color "#202329"))
+
+  (define-advice flymake-goto-next-error (:around (orig-fn &rest args) no-message)
+    "Disable message when jumping to errors."
+    (define-advice message (:override (&rest _) noop))
+    (apply orig-fn args)
+    (advice-remove 'message #'message@noop))
+  :hook
+  (flymake-mode . flymake-popon-mode))
+
 (use-package dape
   :commands (dape)
   :custom
@@ -1071,8 +1087,10 @@
   :config
   ;; Use the same icons as kind-icon
   (+kind-icon-alias 'feature 'keyword)
+  (+kind-icon-alias (intern "special form") 'keyword)
   (+kind-icon-alias 'custom 'variable)
   (+kind-icon-alias 'search 'text)
+  (+kind-icon-alias 'face 'color)
   (setq acm-icon-dir (expand-file-name ".cache/svg-lib" user-emacs-directory))
   (setq acm-icon-alist (mapcar (lambda (l)
                                  (let* ((symbol (car l))
