@@ -982,6 +982,8 @@
 (use-package flymake
   :ensure nil
   :config
+  (set-face-italic 'flymake-warning-echo nil)
+
   (defvar +flymake-buffers nil
     "Saved flymake buffers.")
 
