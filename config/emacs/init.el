@@ -399,7 +399,9 @@
     (vertico-multiform-commands '((t posframe)))
     :config
     (define-advice vertico-posframe--get-border-color (:override () all-same-color)
-      +posframe-border-color))
+      +posframe-border-color)
+    :hook
+    (+late . vertico-posframe-mode))
 
   (use-package mini-frame
     :custom
@@ -881,10 +883,11 @@
 (use-package emacs
   :ensure nil
   :custom
-  (tab-always-indent 'complete)
+  ;; (tab-always-indent 'complete)
   (read-extended-command-predicate #'command-completion-default-include-p)
-  (enable-recursive-minibuffers t)
+  ;; (enable-recursive-minibuffers t)
   :hook
+  (+late . minibuffer-depth-indicate-mode)
   (+late . context-menu-mode))
 
 (use-package smartparens
@@ -923,7 +926,8 @@
   :after embark
   :config
   (vertico-mode 1)
-  (vertico-multiform-mode 1))
+  ;; (vertico-multiform-mode 1)
+  )
 
 (use-package marginalia
   :after vertico
@@ -942,28 +946,6 @@
   (yas-global-mode 1))
 
 (use-package yasnippet-snippets :after yasnippet :defer t)
-
-(use-package cape
-  :defer t
-  :hook
-  (completion-at-point-functions . cape-dabbrev)
-  (completion-at-point-functions . cape-file))
-
-(use-package corfu
-  :custom
-  (corfu-auto t)
-  (corfu-auto-prefix 2)
-  :hook
-  (+late . global-corfu-mode))
-
-(use-package kind-icon
-  :after corfu
-  :config
-  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
-
-(defun +kind-icon-alias (alias from)
-  "Add ALIAS mapping FROM `kind-icon-mapping'."
-  (add-to-list 'kind-icon-mapping (cons alias (cdr (assoc from kind-icon-mapping)))))
 
 (use-package imenu-list
   :custom
@@ -988,7 +970,6 @@
 
 
 ;; Debugging
-
 (use-package flymake
   :ensure nil
   :config
@@ -1057,6 +1038,12 @@
 
 ;; LSP
 
+(use-package kind-icon
+  :config
+  (defun +kind-icon-alias (alias from)
+    "Add ALIAS mapping FROM `kind-icon-mapping'."
+    (add-to-list 'kind-icon-mapping (cons alias (cdr (assoc from kind-icon-mapping))))))
+
 (use-package lsp-bridge
   :after (yasnippet markdown-mode orderless kind-icon)
   :ensure (:host github :repo "manateelazycat/lsp-bridge"
@@ -1077,7 +1064,7 @@
   ;; manually enabled below
   (lsp-bridge-enable-mode-line nil)
 
-  ;; (lsp-bridge-enable-completion-in-minibuffer t)
+  (lsp-bridge-enable-completion-in-minibuffer t)
   (lsp-bridge-enable-completion-in-string t)
   (lsp-bridge-symbols-enable-which-func t)
 
@@ -1103,14 +1090,14 @@
   (+kind-icon-alias 'search 'text)
   (+kind-icon-alias 'face 'color)
   (setq acm-icon-dir (expand-file-name ".cache/svg-lib" user-emacs-directory))
-  (setq acm-icon-alist (mapcar (lambda (l)
-                                 (let* ((symbol (car l))
-                                        (key (if (eq symbol t) t (symbol-name symbol)))
-                                        (icon (plist-get l :icon))
-                                        (face (plist-get l :face))
-                                        (color (face-foreground face nil t)))
-                                   (cons key (list "material" icon color))))
-                               kind-icon-mapping))
+  (dolist (l kind-icon-mapping)
+    (let* ((symbol (car l))
+           (key (if (eq symbol t) t (symbol-name symbol)))
+           (icon (plist-get l :icon))
+           (face (plist-get l :face))
+           (color (face-foreground face nil t)))
+      (when (assoc key acm-icon-alist)
+        (setf (cdr (assoc key acm-icon-alist)) (list "material" icon color)))))
 
   (evil-set-initial-state 'lsp-bridge-ref-mode 'insert)
   (+pop "*lsp-bridge-doc*")
@@ -1142,14 +1129,11 @@
       (let ((face (doom-modeline-face (get-text-property 0 'face ret))))
         (propertize (nerd-icons-mdicon "nf-md-rocket") 'face face))))
 
-  (define-advice lsp-bridge--enable (:after () disable-corfu)
-    "Disable corfu-mode when lsp-bridge is enabled."
-    (corfu-mode -1)
+  (define-advice lsp-bridge--enable (:after () extra)
+    (setq-local completion-in-region-function (lambda (&rest _) (call-interactively #'lsp-bridge-popup-complete-menu)))
     (unless (member major-mode +--nobreadcrumb) (lsp-bridge-breadcrumb-mode 1)))
 
-  (define-advice lsp-bridge--disable (:after () enable-corfu)
-    "Re-enable corfu-mode when lsp-bridge is disabled."
-    (corfu-mode 1)
+  (define-advice lsp-bridge--disable (:after () extra)
     (lsp-bridge-breadcrumb-mode -1)
     (lsp-bridge-kill-process))
 
