@@ -8,6 +8,10 @@
 
 (+load "elpaca-init")
 
+(defgroup +deirn nil
+  "Deirn's custom group."
+  :group 'emacs)
+
 
 ;; Optimizations
 
@@ -147,7 +151,6 @@
 
 (map-spc!
   "e c" '("open config"    . +open-config)
-  "e r" '("reload init.el" . +reload-init)
   "e r" '("restart"        . restart-emacs)
   "e q" '("quit"           . save-buffers-kill-emacs))
 
@@ -434,7 +437,7 @@
 (+pop '(major-mode . Custom-mode))
 (+pop '(major-mode . occur-mode))
 (+pop '(major-mode . xref--xref-buffer-mode))
-(+pop '(major-mode . compilation-mode))
+(+pop '(major-mode . compilation-mode) 'bottom)
 (+pop '(this-command . help))
 (+pop '(this-command . customize))
 (+pop '(this-command . man))
@@ -717,6 +720,7 @@
 (use-package evil
   :after undo-fu
   :custom
+  (evil-want-minibuffer t)
   (evil-want-keybinding nil)
   (evil-undo-system 'undo-fu)
   (evil-respect-visual-line-mode t)
@@ -762,7 +766,10 @@
 
 ;; Languages
 
-(defvar +nobreadcrumb nil)
+(defvar +--nobreadcrumb nil)
+(defun +nobreadcrumb (mode)
+  "Disable breadcrumb for MODE."
+  (add-to-list '+--nobreadcrumb mode))
 
 (use-package treesit-auto
   :custom
@@ -771,17 +778,20 @@
   (treesit-auto-add-to-auto-mode-alist 'all)
   (global-treesit-auto-mode 1))
 
-(use-package fish-mode :mode "\\.fish\\'")
+(use-package fish-mode
+  :mode "\\.fish\\'"
+  :config
+  (+nobreadcrumb 'fish-mode))
 
 (use-package markdown-mode
   :mode ("\\.md\\'" . gfm-mode)
   :config
-  (add-to-list '+nobreadcrumb 'gfm-mode))
+  (+nobreadcrumb 'gfm-mode))
 
 (use-package sh-script
   :ensure nil
   :config
-  (add-to-list '+nobreadcrumb 'bash-ts-mode))
+  (+nobreadcrumb 'bash-ts-mode))
 
 (use-package js
   :ensure nil
@@ -862,7 +872,7 @@
   (advice-add #'embark-completing-read-prompter
               :around #'embark-hide-which-key-indicator))
 
-(map-spc! "a" '("act" . embark-act))
+(map-spc! "a" '("+act" . embark-act))
 (map! "M-e" #'embark-act)
 
 
@@ -1053,7 +1063,6 @@
                  :files (:defaults "*.el" "*.py" "acm" "core" "langserver" "multiserver" "resources")
                  :build (:not elpaca--byte-compile))
   :custom
-  (elpaca-build-steps)
   ;; use uv, so it has consistent package version
   (lsp-bridge-python-command "uv")
   (lsp-bridge-enable-hover-diagnostic t)
@@ -1107,6 +1116,17 @@
   (+pop "*lsp-bridge-doc*")
   (+pop '(major-mode . lsp-bridge-ref-mode) 'bottom)
 
+  (defcustom +lsp-bridge-root-config '()
+    "LSP-Bridge root directories."
+    :type '(repeat directory)
+    :group '+deirn)
+
+  ;; Get root folder from custom alist
+  (setq lsp-bridge-get-project-path-by-filepath
+        (lambda (file-path)
+          (cl-find-if (lambda (e) (string-prefix-p e file-path))
+                      +lsp-bridge-root-config)))
+
   ;; Add to jump list before going to definition, impl, etc
   (advice-add 'lsp-bridge--record-mark-ring :before #'evil-set-jump)
 
@@ -1125,19 +1145,13 @@
   (define-advice lsp-bridge--enable (:after () disable-corfu)
     "Disable corfu-mode when lsp-bridge is enabled."
     (corfu-mode -1)
-    (unless (member major-mode +nobreadcrumb) (lsp-bridge-breadcrumb-mode 1))
-    ;; (when (+has-lsp)
-    ;;   (lsp-bridge-semantic-tokens-mode 1))
-    )
+    (unless (member major-mode +--nobreadcrumb) (lsp-bridge-breadcrumb-mode 1)))
 
   (define-advice lsp-bridge--disable (:after () enable-corfu)
     "Re-enable corfu-mode when lsp-bridge is disabled."
     (corfu-mode 1)
     (lsp-bridge-breadcrumb-mode -1)
-    (lsp-bridge-kill-process)
-    ;; (when lsp-bridge-semantic-tokens-mode
-    ;;   (lsp-bridge-semantic-tokens-mode -1))
-    )
+    (lsp-bridge-kill-process))
 
   (defvar +lsp-bridge-doc-mode-map (make-sparse-keymap))
   (define-minor-mode +lsp-bridge-doc-mode
@@ -1145,7 +1159,7 @@
 
   (defun +setup-lsp-bridge-doc-buffer ()
     "Setup *lsp-bridge-doc* buffer."
-    (when-let ((buf (get-buffer "*lsp-bridge-doc*")))
+    (when-let* ((buf (get-buffer "*lsp-bridge-doc*")))
       (with-current-buffer buf
         (unless +lsp-bridge-doc-mode
           (+lsp-bridge-doc-mode 1))
@@ -1250,10 +1264,11 @@
 
 
 (+load "init-private")
+(+load "custom")
 
 (run-with-idle-timer
  0.2 nil
  (lambda ()
    (run-hooks '+late-hook)))
 
-;;; init.el ends here
+;;; init.el ends here.
