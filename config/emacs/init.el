@@ -556,7 +556,9 @@
   (dirvish-attributes '(nerd-icons vc-state file-size file-time))
   (dirvish-side-attributes '(nerd-icons collapse vc-state file-size))
   (dirvish-hide-details '(dirvish-side))
+  (dirvish-header-line-height 24)
   (dirvish-mode-line-height 24)
+  (dirvish-collapse-separator "/")
 
   :init
   (dirvish-override-dired-mode)
@@ -883,7 +885,7 @@
 (use-package emacs
   :ensure nil
   :custom
-  ;; (tab-always-indent 'complete)
+  (tab-always-indent 'complete)
   (read-extended-command-predicate #'command-completion-default-include-p)
   ;; (enable-recursive-minibuffers t)
   :hook
