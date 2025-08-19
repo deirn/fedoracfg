@@ -41,9 +41,17 @@
   `(add-hook '+late-hook #'(lambda () ,@body)))
 
 (defmacro after! (package &rest body)
-  "Delay running BODY until PACKAGE loaded."
+  "Delay running BODY until PACKAGE(s) loaded.
+Usage:
+  (after! pkg (message \"pkg loaded\"))
+  (after! (pkg1 pkg2) (message \"pkg1 and pkg2 loaded\"))"
   (declare (indent defun))
-  `(with-eval-after-load ',package ,@body))
+  (if (not (listp package))
+      `(with-eval-after-load ',package ,@body)
+    (let ((pkg (car package)))
+      (dolist (next (reverse (cdr package)))
+        (setq body `((after! ,next ,@body))))
+      `(after! ,pkg ,@body))))
 
 
 ;; Key Bindings Setup
@@ -191,7 +199,8 @@
   (+late . doom-modeline-mode))
 
 (use-package hide-mode-line
-  :commands (hide-mode-line-mode))
+  :commands (hide-mode-line-mode
+             global-hide-mode-line-mode))
 
 (use-package solaire-mode
   :hook
@@ -223,11 +232,31 @@
   :hook
   (+late . global-hl-todo-mode))
 
+(use-package perfect-margin
+  :commands (perfect-margin-mode)
+  :config
+  (define-advice perfect-margin--supported-side-window-p (:around (orig-fn win) more-side-window)
+    (or (+is-dirvish-side win)
+        (funcall orig-fn win)))
+  )
+
+(define-minor-mode +zen-mode
+  "Toggle Zen Mode."
+  :global t
+  :init-value nil
+  (let ((enable (if +zen-mode 1 -1)))
+    (global-hide-mode-line-mode enable)
+    (perfect-margin-mode enable)))
+
 (map-spc!
-  "t m"   '("menu bar"     . menu-bar-mode)
-  "t n"   '("line numbers" . display-line-numbers-mode)
-  "t w"   '("wrap"         . visual-line-mode)
-  "t SPC" '("whitespace"   . whitespace-mode))
+  "t m"   '("mode line"        . hide-mode-line-mode)
+  "t M-m" '("global mode line" . global-hide-mode-line-mode)
+  "t M"   '("menu bar"         . menu-bar-mode)
+  "t n"   '("line numbers"     . display-line-numbers-mode)
+  "t p"   '("perfect margin"   . perfect-margin-mode)
+  "t w"   '("wrap"             . visual-line-mode)
+  "t z"   '("zen"              . +zen-mode)
+  "t SPC" '("whitespace"       . whitespace-mode))
 
 
 ;; Frame
@@ -728,8 +757,11 @@
   (evil-want-keybinding nil)
   (evil-undo-system 'undo-fu)
   (evil-respect-visual-line-mode t)
-
   :config
+  (setq evil-insert-state-cursor `(,(face-foreground 'ansi-color-blue)    bar)
+        evil-normal-state-cursor `(,(face-foreground 'ansi-color-green)   box)
+        evil-emacs-state-cursor  `(,(face-foreground 'ansi-color-magenta) box)
+        evil-visual-state-cursor `(,(face-foreground 'ansi-color-yellow)  box))
   (evil-mode 1))
 
 (use-package evil-collection

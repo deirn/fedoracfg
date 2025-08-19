@@ -1,3 +1,5 @@
+# @fish-lsp-disable 2002
+
 set -gx FEDORACFG $HOME/Documents/github.com/deirn/fedoracfg
 
 # [ direnv ]
@@ -39,6 +41,7 @@ fish_add_path $HOME/.local/share/JetBrains/Toolbox/bin
 fish_add_path $HOME/.local/share/JetBrains/Toolbox/scripts
 fish_add_path $HOME/Android/Sdk/platform-tools
 fish_add_path $HOME/.pub-cache/bin
+fish_add_path $HOME/.local/share/qlot/bin
 fish_add_path $FEDORACFG/bin
 # [ path variables ]
 
