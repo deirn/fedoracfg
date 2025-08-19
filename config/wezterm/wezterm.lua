@@ -45,7 +45,7 @@ c.colors = {
 }
 
 c.command_palette_bg_color = tab_bg
-c.command_palette_font = wezterm.font('JetBrains Mono')
+c.command_palette_font = wezterm.font('JetBrainsMono Nerd Font')
 c.command_palette_font_size = 10
 
 -- disable ligatures

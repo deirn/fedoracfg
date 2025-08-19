@@ -31,6 +31,7 @@
 
 ;; Custom Hooks
 
+(defvar +late-hook-ran nil)
 (defcustom +late-hook nil
   "Hook that runs after startup."
   :type 'hook)
@@ -38,7 +39,9 @@
 (defmacro late! (&rest body)
   "Delay running BODY until after startup."
   (declare (indent defun))
-  `(add-hook '+late-hook #'(lambda () ,@body)))
+  (if (bound-and-true-p +late-hook-ran)
+      `(progn ,@body)
+    `(add-hook '+late-hook #'(lambda () ,@body))))
 
 (defmacro after! (package &rest body)
   "Delay running BODY until PACKAGE(s) loaded.
@@ -114,8 +117,24 @@ Usage:
   "p" '(:ignore t :which-key "project")
   "s" '(:ignore t :which-key "search")
   "t" '(:ignore t :which-key "toggle")
-  "w" '(:ignore t :which-key "window")
-  )
+  "w" '(:ignore t :which-key "window"))
+
+
+;; Package Utilities
+
+(defun +elpaca-name (&optional interactive)
+  "Prompt for package, copy its name to kill ring if INTERACTIVE."
+  (interactive (list t))
+  (when-let* ((name-symbol (car (elpaca-menu-item)))
+              (name (symbol-name name-symbol)))
+    (when interactive
+      (kill-new name))
+    name))
+
+(defun +elpaca-insert-name ()
+  "Prompt for package, insert its name at point."
+  (interactive)
+  (insert (+elpaca-name)))
 
 
 ;; Behaviour
@@ -402,7 +421,8 @@ Usage:
     (defun +which-key-posframe-poshandler (info)
       (let ((og-pos (+posframe-poshandler info))
             (vertico-posframe (posframe--find-existing-posframe vertico-posframe--buffer)))
-        (if (frame-visible-p vertico-posframe)
+        (if (and (eq (window-buffer (frame-root-window vertico-posframe)) vertico-posframe--buffer)
+                 (frame-visible-p vertico-posframe))
             (cons (car og-pos) (+ +posframe-y-offset (frame-pixel-height vertico-posframe) -1))
           og-pos)))
     (setq which-key-posframe-poshandler #'+which-key-posframe-poshandler)
@@ -444,6 +464,7 @@ Usage:
     :config
     (add-to-list 'mini-frame-advice-functions 'map-y-or-n-p)
     (add-to-list 'mini-frame-ignore-functions 'completing-read)
+    (add-to-list 'mini-frame-ignore-commands 'elpaca-ui-search)
     (add-to-list 'mini-frame-ignore-commands 'evil-ex)
     (set-face-background 'child-frame-border +posframe-border-color)
     :hook
@@ -475,6 +496,10 @@ Usage:
 
 
 ;; Buffer
+
+(use-package nerd-icons-ibuffer
+  :hook
+  (ibuffer-mode . nerd-icons-ibuffer-mode))
 
 (defun +kill-other-buffers ()
   "Kill all other buffers except the current one and essential buffers."
@@ -968,6 +993,11 @@ Usage:
   :config
   (marginalia-mode 1))
 
+(use-package nerd-icons-completion
+  :hook
+  (+late . nerd-icons-completion-mode)
+  (marginalia-mode . #'nerd-icons-completion-marginalia-setup))
+
 (use-package orderless
   :custom
   (completion-styles '(orderless))
@@ -1072,14 +1102,20 @@ Usage:
 
 ;; LSP
 
-(use-package kind-icon
+(use-package nerd-icons-corfu
   :config
-  (defun +kind-icon-alias (alias from)
-    "Add ALIAS mapping FROM `kind-icon-mapping'."
-    (add-to-list 'kind-icon-mapping (cons alias (cdr (assoc from kind-icon-mapping))))))
+  (defun +nic-alias (alias from)
+    "Add ALIAS mapping FROM `nerd-icons-corfu-mapping'."
+    (add-to-list 'nerd-icons-corfu-mapping (cons alias (cdr (assoc from nerd-icons-corfu-mapping)))))
+
+  (+nic-alias 'feature 'keyword)
+  (+nic-alias (intern "special form") 'keyword)
+  (+nic-alias 'custom 'variable)
+  (+nic-alias 'search 'text)
+  (+nic-alias 'face 'color))
 
 (use-package lsp-bridge
-  :after (yasnippet markdown-mode orderless kind-icon)
+  :after (yasnippet markdown-mode orderless nerd-icons-corfu)
   :ensure (:host github :repo "manateelazycat/lsp-bridge"
                  :files (:defaults "*.el" "*.py" "acm" "core" "langserver" "multiserver" "resources")
                  :build (:not elpaca--byte-compile))
@@ -1117,21 +1153,49 @@ Usage:
   (acm-candidate-match-function #'orderless-flex)
 
   :config
-  ;; Use the same icons as kind-icon
-  (+kind-icon-alias 'feature 'keyword)
-  (+kind-icon-alias (intern "special form") 'keyword)
-  (+kind-icon-alias 'custom 'variable)
-  (+kind-icon-alias 'search 'text)
-  (+kind-icon-alias 'face 'color)
-  (setq acm-icon-dir (expand-file-name ".cache/svg-lib" user-emacs-directory))
-  (dolist (l kind-icon-mapping)
-    (let* ((symbol (car l))
-           (key (if (eq symbol t) t (symbol-name symbol)))
-           (icon (plist-get l :icon))
-           (face (plist-get l :face))
-           (color (face-foreground face nil t)))
-      (when (assoc key acm-icon-alist)
-        (setf (cdr (assoc key acm-icon-alist)) (list "material" icon color)))))
+  ;; Use nerd icons
+  (defvar +acm-nerd-icon-mapper
+    '(("material" :fn nerd-icons-mdicon :prefix "nf-md-")
+      ("octicons" :fn nerd-icons-octicon :prefix "nf-oct-")
+      ("codicons" :fn nerd-icons-codicon :prefix "nf-cod-")
+      ("cod" :fn nerd-icons-codicon :prefix "nf-cod-")))
+
+  (define-advice acm-icon-build (:around (orig-fn collection name fg-color) use-nerd-icons)
+    (if-let* ((_ acm-enable-icon)
+              (map (cdr (assoc collection +acm-nerd-icon-mapper)))
+              (nf-fn (plist-get map :fn))
+              (prefix (plist-get map :prefix))
+              (nf-name (concat prefix name))
+              (face `(:foreground ,fg-color)))
+        (concat " " (funcall nf-fn nf-name :face face) " ")
+      (funcall orig-fn collection name fg-color)))
+
+  (define-advice lsp-bridge-breadcrumb--icon (:around (orig-fn kind active) use-nerd-icons)
+    (if-let* ((_ lsp-bridge-breadcrumb-show-icon)
+              (icon (cdr (assoc (downcase kind) acm-icon-alist)))
+              (icon (or icon (cdr (assoc t acm-icon-alist))))
+              (collection (nth 0 icon))
+              (_ (assoc collection +acm-nerd-icon-mapper))
+              (name (nth 1 icon))
+              (fg-color (if active (nth 2 icon) (face-foreground 'mode-line-inactive))))
+        (acm-icon-build collection name fg-color)
+      (funcall orig-fn kind active)))
+
+  ;; Use the same icons as nerd-icons-corfu
+  (dolist (l nerd-icons-corfu-mapping)
+    (when-let* ((key (symbol-name (car l)))
+                (_ (assoc key acm-icon-alist))
+                (map (cdr l))
+                (style (plist-get map :style))
+                (icon (plist-get map :icon))
+                (face (plist-get map :face))
+                (color (face-foreground face)))
+      (setf (cdr (assoc key acm-icon-alist)) (list style icon color))))
+
+  ;; Replace - with _ as that's what nerd icons uses
+  (dolist (map acm-icon-alist)
+    (when (assoc (nth 1 map) +acm-nerd-icon-mapper)
+      (setf (nth 2 map) (replace-regexp-in-string "-" "_" (nth 2 map)))))
 
   (evil-set-initial-state 'lsp-bridge-ref-mode 'insert)
   (+pop "*lsp-bridge-doc*")
@@ -1287,6 +1351,7 @@ Usage:
 (run-with-idle-timer
  0.2 nil
  (lambda ()
-   (run-hooks '+late-hook)))
+   (run-hooks '+late-hook)
+   (setq +late-hook-ran t)))
 
 ;;; init.el ends here.
