@@ -62,6 +62,7 @@ Usage:
 (use-package which-key
   :ensure nil
   :custom
+  (which-key-show-prefix 'top)
   (which-key-idle-delay 0.3)
   (which-key-sort-order 'which-key-key-order-alpha)
   (which-key-sort-uppercase-first nil)
@@ -118,6 +119,8 @@ Usage:
   "s" '(:ignore t :which-key "search")
   "t" '(:ignore t :which-key "toggle")
   "w" '(:ignore t :which-key "window"))
+
+(map-spc! "e k" '("keybinds" . which-key-show-top-level))
 
 
 ;; Package Utilities
@@ -204,7 +207,9 @@ Usage:
 
 (late! (global-hl-line-mode))
 
-(use-package nerd-icons :defer t)
+(use-package nerd-icons :defer t
+  :custom
+  (nerd-icons-default-adjust 0.1))
 
 (use-package doom-themes
   :config
@@ -403,6 +408,7 @@ Usage:
   :custom
   (transient-mode-line-format nil))
 
+(use-package posframe)
 (defvar +posframe-y-offset 100)
 (defvar +posframe-border-color "#bbc2cf")
 (defvar +posframe-params '((left-fringe 10)
@@ -427,18 +433,36 @@ Usage:
           og-pos)))
     (setq which-key-posframe-poshandler #'+which-key-posframe-poshandler)
 
+    (define-advice which-key-posframe--show-buffer (:around (orig-fn dim) fix-dim)
+      (setf (car dim)
+            (with-current-buffer which-key--buffer
+              (count-lines (point-min) (point-max))))
+      (setf (cdr dim)
+            (max (cdr dim)
+                 (with-current-buffer which-key--buffer
+                   (save-excursion
+                     (goto-char (point-min))
+                     (1- (length (thing-at-point 'line t)))))))
+      (funcall orig-fn dim))
+
     (set-face-background 'which-key-posframe-border +posframe-border-color)
     :hook
     (+late . which-key-posframe-mode))
 
-  (use-package transient-posframe
-    :custom
-    (transient-posframe-poshandler #'+posframe-poshandler)
-    (transient-posframe-parameters +posframe-params)
-    :config
-    (set-face-background 'transient-posframe-border +posframe-border-color)
-    :hook
-    (+late . transient-posframe-mode))
+  ;; https://github.com/emacsorphanage/transient-posframe/wiki
+  (after! (transient posframe)
+    (setq transient-display-buffer-action
+          (list
+           (lambda (buffer _)
+             (posframe-show
+              buffer
+              :poshandler #'+posframe-poshandler
+              :min-width transient-minimal-frame-width
+              :lines-truncate t
+              :internal-border-color +posframe-border-color
+              :internal-border-width 1
+              :override-parameters +posframe-params)
+             (get-buffer-window transient--buffer t)))))
 
   (use-package vertico-posframe
     :custom
@@ -613,16 +637,12 @@ Usage:
   (dirvish-header-line-height 24)
   (dirvish-mode-line-height 24)
   (dirvish-collapse-separator "/")
-
-  :init
-  (dirvish-override-dired-mode)
-
   :config
   (dirvish-side-follow-mode 1)
   (put 'dired-find-alternate-file 'disabled nil)
   (add-to-list 'dirvish-side-window-parameters '(+dirvish-side . t))
-
   :hook
+  (+late . dirvish-override-dired-mode)
   (dired-mode . dired-omit-mode))
 
 (use-package diredfl
@@ -832,6 +852,15 @@ Usage:
   "Disable breadcrumb for MODE."
   (add-to-list '+--nobreadcrumb mode))
 
+(defun +ts (language url &rest conf)
+  "Add new treesit LANGUAGE source from URL and extra CONF."
+  (add-to-list 'treesit-language-source-alist (cons language (cons url conf))))
+
+(defun +lsp (mode command)
+  "Set lsp-bridge server COMMAND for MODE."
+  (after! lsp-bridge
+    (add-to-list 'lsp-bridge-single-lang-server-mode-list (cons mode command))))
+
 (use-package treesit-auto
   :custom
   (treesit-auto-install 'prompt)
@@ -866,21 +895,23 @@ Usage:
 
 (use-package dart-ts-mode
   :ensure (:host github :repo "50ways2sayhard/dart-ts-mode")
-  :after lsp-bridge
   :mode "\\.dart\\'"
   :config
-  (add-to-list 'treesit-language-source-alist '(dart . ("https://github.com/UserNobody14/tree-sitter-dart")))
-  (add-to-list 'lsp-bridge-single-lang-server-mode-list '(dart-ts-mode . "dart-analysis-server")))
+  (+ts 'dart "https://github.com/UserNobody14/tree-sitter-dart")
+  (+lsp 'dart-ts-mode "dart-analysis-server"))
 
 (use-package svelte-ts-mode
   :ensure (:host github :repo "leafOfTree/svelte-ts-mode")
-  :after lsp-bridge
   :config
-  (dolist (e svelte-ts-mode-language-source-alist)
-    (add-to-list 'treesit-language-source-alist e))
-  (add-to-list 'lsp-bridge-single-lang-server-mode-list '(svelte-ts-mode . "svelteserver")))
+  (dolist (e svelte-ts-mode-language-source-alist) (apply '+ts e))
+  (+lsp 'svelte-ts-mode "svelteserver"))
 
-(use-package nix-ts-mode :mode "\\.nix\\'")
+(use-package nix-ts-mode
+  :mode "\\.nix\\'")
+
+(use-package text-mode
+  :ensure nil
+  :mode "readme\\'")
 
 (use-package beancount
   :ensure (:host github :repo "beancount/beancount-mode")
@@ -933,7 +964,10 @@ Usage:
   (advice-add #'embark-completing-read-prompter
               :around #'embark-hide-which-key-indicator))
 
-(map-spc! "a" '("+act" . embark-act))
+(map-spc!
+  "a"   '("act" . embark-act)
+  "b c" 'combobulate)
+
 (map! "M-e" #'embark-act)
 
 
@@ -971,7 +1005,7 @@ Usage:
   "Run `consult-fd` with universal argument to prompt for directory."
   (interactive)
   (let ((current-prefix-arg '(4))) ; simulate C-u
-    (call-interactively #'consult-ripgrep)))
+    (call-interactively #'consult-fd)))
 
 (defun +consult-ripgrep-with-dir ()
   "Run `consult-ripgrep` with universal argument to prompt for directory."
@@ -1006,8 +1040,8 @@ Usage:
 
 (use-package yasnippet
   :defer t
-  :init
-  (yas-global-mode 1))
+  :hook
+  (+late . yas-global-mode ))
 
 (use-package yasnippet-snippets :after yasnippet :defer t)
 
@@ -1023,6 +1057,7 @@ Usage:
   "s f" '("fd project"   . consult-fd)
   "s F" '("fd directory" . +consult-fd-with-dir)
   "s i" '("imenu"        . consult-imenu)
+  "s j" '("jump"         . evil-collection-consult-jump-list)
   "s l" '("line"         . consult-line)
   "s L" '("line multi"   . consult-line-multi)
   "s r" '("rg project"   . consult-ripgrep)
