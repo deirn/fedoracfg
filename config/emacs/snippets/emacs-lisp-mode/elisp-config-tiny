@@ -1,0 +1,10 @@
+# key: elisp-config-tiny
+# name: elisp-config-tiny
+# --
+;;; ${1:`(file-name-nondirectory (buffer-file-name))`} --- -*- lexical-binding: t; -*-
+;;; Commentary:${2:$$(concat "\n;;; " yas-text)}
+;;; Code:
+
+$0
+
+;;; $1 ends here.

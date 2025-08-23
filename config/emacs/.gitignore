@@ -5,5 +5,8 @@
 !elpaca-init.el
 !init.el
 
+!lisp/
+!lisp/**
+
 !snippets/
 !snippets/**
