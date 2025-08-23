@@ -1,9 +1,12 @@
 ;;; init.el --- -*- lexical-binding: t; -*-
+;;; Commentary:
+;;    My Emacs init.
+;;; Code:
 
 (when (version< emacs-version "30") (error "This requires Emacs 30 and above!"))
 
 (defun +load (file)
-  "Load a FILE."
+  "Load a FILE relative to `user-emacs-directory'."
   (load (expand-file-name file user-emacs-directory) t))
 
 (+load "elpaca-init")
@@ -17,7 +20,7 @@
 
 (use-package benchmark-init
   :config
-  (add-hook 'after-init-hook 'benchmark-init/deactivate))
+  (add-hook 'elpaca-after-init-hook 'benchmark-init/deactivate))
 
 (use-package gcmh
   :config
@@ -29,7 +32,21 @@
     (exec-path-from-shell-initialize)))
 
 
-;; Custom Hooks
+;; Package Utilities
+
+(defun +elpaca-name (&optional interactive)
+  "Prompt for package, copy its name to kill ring if INTERACTIVE."
+  (interactive (list t))
+  (when-let* ((name-symbol (car (elpaca-menu-item)))
+              (name (symbol-name name-symbol)))
+    (when interactive
+      (kill-new name))
+    name))
+
+(defun +elpaca-insert-name ()
+  "Prompt for package, insert its name at point."
+  (interactive)
+  (insert (+elpaca-name)))
 
 (defvar +late-hook-ran nil)
 (defcustom +late-hook nil
@@ -42,6 +59,16 @@
   (if (bound-and-true-p +late-hook-ran)
       `(progn ,@body)
     `(add-hook '+late-hook #'(lambda () ,@body))))
+
+(add-hook 'elpaca-after-init-hook
+          (lambda ()
+            (run-with-idle-timer
+             0.2 nil
+             (lambda ()
+               (run-hooks '+late-hook)
+               (setq +late-hook-ran t)
+               (+load "init-private")
+               (+load "custom")))))
 
 (defmacro after! (package &rest body)
   "Delay running BODY until PACKAGE(s) loaded.
@@ -74,41 +101,29 @@ Usage:
 (use-package general
   :config
   (global-unset-key (kbd "C-SPC"))
-  (general-create-definer +spc
-    :states '(normal visual motion emacs)
+  (general-create-definer +key-spc
+    :states '(normal visual motion emacs insert)
     :keymaps 'override
     :prefix "SPC"
     :global-prefix "C-SPC")
 
-  (general-create-definer +normal
+  (general-create-definer +key-normal
     :states 'normal
     :keymaps 'override)
 
-  (general-create-definer +visual
+  (general-create-definer +key-visual
     :states 'visual
     :keymaps 'override))
 
-(defmacro map-spc! (&rest rules)
-  "Map RULES for SPC keybinds."
+(defmacro map! (definer &rest rules)
+  "Map RULES for DEFINER."
   (declare (indent defun))
-  `(late! (+spc ,@rules)))
+  (if (eq definer nil)
+      `(late! (general-def ,@rules))
+    (let ((definer (intern (concat "+key-" (symbol-name definer)))))
+      `(late! (,definer ,@rules)))))
 
-(defmacro map-normal! (&rest rules)
-  "Map RULES for NORMAL keybinds."
-  (declare (indent defun))
-  `(late! (+normal ,@rules)))
-
-(defmacro map-visual! (&rest rules)
-  "Map RULES for VISUAL keybinds."
-  (declare (indent defun))
-  `(late! (+visual ,@rules)))
-
-(defmacro map! (&rest rules)
-  "Map RULES for keychord keybinds."
-  (declare (indent defun))
-  `(late! (general-def ,@rules)))
-
-(map-spc!
+(map! spc
   "b" '(:ignore t :which-key "buffer")
   "c" '(:ignore t :which-key "code")
   "e" '(:ignore t :which-key "emacs")
@@ -120,24 +135,8 @@ Usage:
   "t" '(:ignore t :which-key "toggle")
   "w" '(:ignore t :which-key "window"))
 
-(map-spc! "e k" '("keybinds" . which-key-show-top-level))
-
-
-;; Package Utilities
-
-(defun +elpaca-name (&optional interactive)
-  "Prompt for package, copy its name to kill ring if INTERACTIVE."
-  (interactive (list t))
-  (when-let* ((name-symbol (car (elpaca-menu-item)))
-              (name (symbol-name name-symbol)))
-    (when interactive
-      (kill-new name))
-    name))
-
-(defun +elpaca-insert-name ()
-  "Prompt for package, insert its name at point."
-  (interactive)
-  (insert (+elpaca-name)))
+(map! spc
+  "e k" '("keybinds" . which-key-show-top-level))
 
 
 ;; Behaviour
@@ -179,12 +178,13 @@ Usage:
   (load-file (expand-file-name "init.el" user-emacs-directory))
   (message "init.el reloaded!"))
 
-(map-spc!
-  "e c" '("open config"    . +open-config)
-  "e r" '("restart"        . restart-emacs)
-  "e q" '("quit"           . save-buffers-kill-emacs))
+(map! spc
+  "e c" '("open config" . +open-config)
+  "e r" '("restart"     . restart-emacs)
+  "e q" '("quit"        . save-buffers-kill-emacs))
 
-(map! "M-<f4>" #'save-buffers-kill-emacs)
+(map! nil
+  "M-<f4>" #'save-buffers-kill-emacs)
 
 
 ;; UI Themes
@@ -272,7 +272,7 @@ Usage:
     (global-hide-mode-line-mode enable)
     (perfect-margin-mode enable)))
 
-(map-spc!
+(map! spc
   "t m"   '("mode line"        . hide-mode-line-mode)
   "t M-m" '("global mode line" . global-hide-mode-line-mode)
   "t M"   '("menu bar"         . menu-bar-mode)
@@ -384,7 +384,7 @@ Usage:
       (call-interactively #'dirvish-side-decrease-width)
     (call-interactively #'evil-window-decrease-width)))
 
-(map-spc!
+(map! spc
   "w h" '("left"            . evil-window-left)
   "w H" '("split left"      . +split-window-left)
   "w j" '("down"            . evil-window-down)
@@ -425,12 +425,13 @@ Usage:
                                      (z-group . above)))
     :config
     (defun +which-key-posframe-poshandler (info)
-      (let ((og-pos (+posframe-poshandler info))
-            (vertico-posframe (posframe--find-existing-posframe vertico-posframe--buffer)))
-        (if (and (eq (window-buffer (frame-root-window vertico-posframe)) vertico-posframe--buffer)
-                 (frame-visible-p vertico-posframe))
-            (cons (car og-pos) (+ +posframe-y-offset (frame-pixel-height vertico-posframe) -1))
-          og-pos)))
+      (if-let* ((og-pos (+posframe-poshandler info))
+                (vertico-buffer (bound-and-true-p vertico-posframe--buffer))
+                (vertico-posframe (posframe--find-existing-posframe vertico-buffer))
+                (_ (eq (window-buffer (frame-root-window vertico-posframe)) vertico-buffer))
+                (_ (frame-visible-p vertico-posframe)))
+          (cons (car og-pos) (+ +posframe-y-offset (frame-pixel-height vertico-posframe) -1))
+        og-pos))
     (setq which-key-posframe-poshandler #'+which-key-posframe-poshandler)
 
     (define-advice which-key-posframe--show-buffer (:around (orig-fn dim) fix-dim)
@@ -465,6 +466,7 @@ Usage:
              (get-buffer-window transient--buffer t)))))
 
   (use-package vertico-posframe
+    :after vertico
     :custom
     (vertico-posframe-border-width 1)
     (vertico-posframe-poshandler #'+posframe-poshandler)
@@ -474,7 +476,7 @@ Usage:
     (define-advice vertico-posframe--get-border-color (:override () all-same-color)
       +posframe-border-color)
     :hook
-    (+late . vertico-posframe-mode))
+    (+late . vertico-multiform-mode))
 
   (use-package mini-frame
     :custom
@@ -554,7 +556,7 @@ Usage:
             (message "Killed %s" name)))))
     (message "Killed %d buffer(s)." killed-count)))
 
-(map-spc!
+(map! spc
   "b b" '("switch"      . consult-buffer)
   "b i" '("ibuffer"     . ibuffer)
   "b k" '("kill this"   . kill-current-buffer)
@@ -621,7 +623,8 @@ Usage:
   (window-size-change-functions . +schedule-dashboard-refresh)
   (dashboard-mode . +dont-kill-dashboard-buffer))
 
-(map-spc! "o d" '("dashboard" . dashboard-open))
+(map! spc
+  "o d" '("dashboard" . dashboard-open))
 
 
 ;; Directory
@@ -674,7 +677,7 @@ Usage:
           (select-window (get-mru-window nil t t))
           (find-file file))))))
 
-(map-spc!
+(map! spc
   "f f" '("find"         . find-file)
   "f s" '("save"         . save-buffer)
   "f r" '("recent files" . consult-recent-file)
@@ -685,7 +688,7 @@ Usage:
   "p f" '("find file"    . project-find-file)
   "p p" '("switch"       . project-switch-project))
 
-(map!
+(map! nil
   :keymaps 'dirvish-mode-map
   :states '(normal motion)
   "q"   #'+dirvish-quit
@@ -728,7 +731,7 @@ Usage:
    ("\\.gitmodules\\'"    . gitconfig-mode)
    ("\\.gitattributes\\'" . gitattributes-mode)))
 
-(map-spc!
+(map! spc
   "g b" '("blame" . magit-blame)
   "g d" '("diff"  . magit-diff)
   "g g" '("git"   . magit-status)
@@ -749,7 +752,7 @@ Usage:
   :config
   (+pop '(this-command . vterm-other-window)))
 
-(map-spc!
+(map! spc
   "o t" '("terminal"      . vterm-other-window)
   "o T" '("terminal here" . vterm))
 
@@ -762,7 +765,8 @@ Usage:
   :hook
   (+late . elcord-mode))
 
-(map-spc! "t d" '("discord rich presence" . elcord-mode))
+(map! spc
+  "t d" '("discord rich presence" . elcord-mode))
 
 
 ;; Undo/History
@@ -840,7 +844,7 @@ Usage:
   :init
   (evilnc-default-hotkeys))
 
-(map-visual!
+(map! visual
   "A" #'evil-mc-make-cursor-in-visual-selection-end
   "I" #'evil-mc-make-cursor-in-visual-selection-beg)
 
@@ -875,8 +879,13 @@ Usage:
 
 (use-package markdown-mode
   :mode ("\\.md\\'" . gfm-mode)
+  :custom
+  (markdown-display-remote-images t)
+  (markdown-max-image-size '(200 . nil))
   :config
-  (+nobreadcrumb 'gfm-mode))
+  (+nobreadcrumb 'gfm-mode)
+  :hook
+  (gfm-view-mode . markdown-display-inline-images))
 
 (use-package sh-script
   :ensure nil
@@ -964,11 +973,12 @@ Usage:
   (advice-add #'embark-completing-read-prompter
               :around #'embark-hide-which-key-indicator))
 
-(map-spc!
+(map! spc
   "a"   '("act" . embark-act)
   "b c" 'combobulate)
 
-(map! "M-e" #'embark-act)
+(map! nil
+  "M-e" #'embark-act)
 
 
 ;; Completions
@@ -1018,9 +1028,7 @@ Usage:
 (use-package vertico
   :after embark
   :config
-  (vertico-mode 1)
-  ;; (vertico-multiform-mode 1)
-  )
+  (vertico-mode 1))
 
 (use-package marginalia
   :after vertico
@@ -1051,7 +1059,7 @@ Usage:
 
 (use-package wgrep)
 
-(map-spc!
+(map! spc
   "s b" '("buffer"       . consult-buffer)
   "s e" '("error"        . consult-flymake)
   "s f" '("fd project"   . consult-fd)
@@ -1063,12 +1071,13 @@ Usage:
   "s r" '("rg project"   . consult-ripgrep)
   "s R" '("rg directory" . +consult-ripgrep-with-dir))
 
-(map!
+(map! nil
   :keymaps 'minibuffer-local-map
   "M-a" #'marginalia-cycle)
 
 
 ;; Debugging
+
 (use-package flymake
   :ensure nil
   :config
@@ -1089,6 +1098,13 @@ Usage:
     "Save flymake buffers."
     (add-to-list '+flymake-buffers (flymake--diagnostics-buffer-name)))
 
+  (define-advice elisp-flymake-byte-compile (:around (orig-fn &rest args) inherit-load-path)
+    "Make Flymake inherit `load-path' that might be modified by Elpaca.
+This remove warnings on `use-package' body.
+https://emacs.stackexchange.com/a/78310"
+    (let ((elisp-flymake-byte-compile-load-path (append elisp-flymake-byte-compile-load-path load-path)))
+      (apply orig-fn args)))
+
   (+pop '(major-mode flymake-diagnostics-buffer-mode) 'bottom)
   :hook
   (prog-mode . flymake-mode))
@@ -1106,6 +1122,10 @@ Usage:
     (define-advice message (:override (&rest _) noop))
     (apply orig-fn args)
     (advice-remove 'message #'message@noop))
+
+  (define-advice flymake-eldoc-function (:override (&rest _) disable)
+    "Disable eldoc function for flymake."
+    nil)
   :hook
   (flymake-mode . flymake-popon-mode))
 
@@ -1124,13 +1144,13 @@ Usage:
   :hook
   (compilation-filter . ansi-color-compilation-filter))
 
-(map-spc!
+(map! spc
   "c c" '("compile" . compile)
   "d"   '(:keymap dape-global-map :package dape :which-key "dape")
   "o e" '("error"   . flymake-show-buffer-diagnostics)
   "p c" '("compile" . project-compile))
 
-(map-normal!
+(map! normal
   "] e" #'flymake-goto-next-error
   "[ e" #'flymake-goto-prev-error)
 
@@ -1186,8 +1206,11 @@ Usage:
   (acm-enable-icon t)
   (acm-enable-tabnine nil)
   (acm-candidate-match-function #'orderless-flex)
-
   :config
+  ;; Sort snippets first, then other candidates
+  (delete "template-first-part-candidates" acm-completion-backend-merge-order)
+  (setq acm-completion-backend-merge-order (cons "template-first-part-candidates" acm-completion-backend-merge-order))
+
   ;; Use nerd icons
   (defvar +acm-nerd-icon-mapper
     '(("material" :fn nerd-icons-mdicon :prefix "nf-md-")
@@ -1202,7 +1225,7 @@ Usage:
               (prefix (plist-get map :prefix))
               (nf-name (concat prefix name))
               (face `(:foreground ,fg-color)))
-        (concat " " (funcall nf-fn nf-name :face face) " ")
+        (concat " " (funcall nf-fn nf-name :face face) nerd-icons-corfu--space)
       (funcall orig-fn collection name fg-color)))
 
   (define-advice lsp-bridge-breadcrumb--icon (:around (orig-fn kind active) use-nerd-icons)
@@ -1309,21 +1332,6 @@ Usage:
       (call-interactively #'lsp-bridge-show-documentation)
     (call-interactively #'helpful-at-point)))
 
-(defun +go-to-def ()
-  "Show definition at point."
-  (interactive)
-  (if (+has-lsp)
-      (call-interactively #'lsp-bridge-find-def)
-    (evil-set-jump)
-    (call-interactively #'evil-goto-definition)))
-
-(defun +go-to-ref ()
-  "Show references at point."
-  (interactive)
-  (if (+has-lsp)
-      (call-interactively #'lsp-bridge-xref-find-references)
-    (call-interactively #'xref-find-references)))
-
 (defun +show-symbols ()
   "Show symbols in buffer."
   (interactive)
@@ -1331,16 +1339,16 @@ Usage:
       (call-interactively #'lsp-bridge-imenu)
     (call-interactively #'consult-imenu)))
 
-(map-spc!
+(map! spc
   "c a" '("action"        . lsp-bridge-code-action)
   "c r" '("rename symbol" . lsp-bridge-rename)
   "c s" '("symbol list"   . consult-imenu)
   "t l" '("lsp"           . lsp-bridge-mode))
 
-(map-normal!
+(map! normal
   "K"   #'+show-documentation
-  "g d" #'+go-to-def
-  "g r" #'+go-to-ref)
+  "g d" #'lsp-bridge-xref-find-definition
+  "g r" #'lsp-bridge-xref-find-references)
 
 
 ;; Formatting
@@ -1376,17 +1384,9 @@ Usage:
       (call-interactively #'apheleia-format-buffer)
       (message "Formatted using apheleia"))))
 
-(map-spc! "c f" '("format" . +format-buffer))
+(map! spc
+  "c f" '("format" . +format-buffer))
 
 
-
-(+load "init-private")
-(+load "custom")
-
-(run-with-idle-timer
- 0.2 nil
- (lambda ()
-   (run-hooks '+late-hook)
-   (setq +late-hook-ran t)))
 
 ;;; init.el ends here.
