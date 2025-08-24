@@ -2,7 +2,7 @@
 # name: elisp-config-tiny
 # --
 ;;; ${1:`(file-name-nondirectory (buffer-file-name))`} --- -*- lexical-binding: t; -*-
-;;; Commentary:${2:$$(concat "\n;;; " yas-text)}
+;;; Commentary:$2
 ;;; Code:
 
 $0

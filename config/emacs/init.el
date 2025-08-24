@@ -33,7 +33,7 @@
 (+load "lisp/evil")
 (+load "lisp/lsp")
 (+load "lisp/language")
-(+load "lisp/languageisp")
+(+load "lisp/language-elisp")
 (+load "lisp/edit-shortcuts")
 (+load "lisp/completions")
 (+load "lisp/debug")

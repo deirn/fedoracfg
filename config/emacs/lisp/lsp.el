@@ -59,8 +59,8 @@
   (acm-candidate-match-function #'orderless-flex)
   :config
   ;; Sort snippets first, then other candidates
-  (delete "template-first-part-candidates" acm-completion-backend-merge-order)
-  (setq acm-completion-backend-merge-order (cons "template-first-part-candidates" acm-completion-backend-merge-order))
+  ;; (delete "template-first-part-candidates" acm-completion-backend-merge-order)
+  ;; (setq acm-completion-backend-merge-order (cons "template-first-part-candidates" acm-completion-backend-merge-order))
 
   ;; Use nerd icons
   (defvar +acm-nerd-icon-mapper

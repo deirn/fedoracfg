@@ -9,6 +9,9 @@
   (tab-always-indent 'complete)
   (read-extended-command-predicate #'command-completion-default-include-p)
   ;; (enable-recursive-minibuffers t)
+  (read-file-name-completion-ignore-case t)
+  (read-buffer-completion-ignore-case t)
+  (completion-ignore-case t)
   :hook
   (+late . minibuffer-depth-indicate-mode)
   (+late . context-menu-mode))
