@@ -8,14 +8,13 @@
   "Load a FILE relative to `user-emacs-directory'."
   (load (expand-file-name file user-emacs-directory) t))
 
-(+load "elpaca-init")
-
 (defgroup +deirn nil
   "Deirn's custom group."
   :group 'emacs)
 
-(+load "lisp/optimizations")
+(+load "lisp/elpaca")
 (+load "lisp/package-utils")
+(+load "lisp/optimizations")
 (+load "lisp/keybind-setup")
 (+load "lisp/behaviour")
 (+load "lisp/ui")

@@ -24,6 +24,8 @@
 
 (use-package xref
   :ensure nil
+  :custom
+  (xref-prompt-for-identifier nil)
   :config
   (define-advice xref--show-xrefs (:before (&rest _) evil-jump-list)
     "Add to evil jump list before showing xrefs."
@@ -93,6 +95,10 @@
   "s L" '("line multi"   . consult-line-multi)
   "s r" '("rg project"   . consult-ripgrep)
   "s R" '("rg directory" . +consult-ripgrep-with-dir))
+
+(map! normal
+  "g d" #'xref-find-definitions
+  "g r" #'xref-find-references)
 
 (map! nil
   :keymaps 'minibuffer-local-map

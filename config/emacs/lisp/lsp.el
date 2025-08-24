@@ -162,6 +162,7 @@
   (add-hook 'buffer-list-update-hook #'+setup-lsp-bridge-doc-buffer)
 
   :hook
+  (+late . lsp-bridge-xref-override-mode)
   (prog-mode . lsp-bridge-mode)
   (conf-mode . lsp-bridge-mode)
   (text-mode . lsp-bridge-mode)
@@ -197,8 +198,6 @@
   "t l" '("lsp"           . lsp-bridge-mode))
 
 (map! normal
-  "K"   #'+show-documentation
-  "g d" #'lsp-bridge-xref-find-definition
-  "g r" #'lsp-bridge-xref-find-references)
+  "K" #'+show-documentation)
 
 ;;; lsp.el ends here.
