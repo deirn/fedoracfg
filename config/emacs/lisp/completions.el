@@ -25,6 +25,7 @@
 (use-package xref
   :ensure nil
   :custom
+  (xref-search-program 'ripgrep)
   (xref-prompt-for-identifier nil)
   :config
   (define-advice xref--show-xrefs (:before (&rest _) evil-jump-list)
