@@ -1,6 +1,5 @@
-;;; lang-elisp.el --- -*- lexical-binding: t; -*-
+;;; elisp.el --- -*- lexical-binding: t; -*-
 ;;; Commentary:
-;;;   Emacs Lisp
 ;;; Code:
 
 (use-package helpful
@@ -19,4 +18,4 @@
 
 (use-package pcre2el)
 
-;;; lang-elisp.el ends here.
+;;; elisp.el ends here.

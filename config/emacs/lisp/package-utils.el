@@ -34,10 +34,10 @@
             (run-with-idle-timer
              0.2 nil
              (lambda ()
+               (load! custom user-emacs-directory t)
                (run-hooks '+late-hook)
                (setq +late-hook-ran t)
-               (+load "init-private")
-               (+load "custom")))))
+               (load! init-private user-emacs-directory t)))))
 
 (defmacro after! (package &rest body)
   "Delay running BODY until PACKAGE(s) loaded.
