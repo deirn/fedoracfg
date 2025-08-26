@@ -19,7 +19,10 @@
   (conf-mode . display-line-numbers-mode)
   (text-mode . display-line-numbers-mode))
 
-(late! (global-hl-line-mode))
+(late!
+  (global-hl-line-mode)
+  (line-number-mode)
+  (column-number-mode))
 
 (use-package nerd-icons :defer t
   :custom
@@ -80,8 +83,7 @@
   :config
   (define-advice perfect-margin--supported-side-window-p (:around (orig-fn win) more-side-window)
     (or (+is-dirvish-side win)
-        (funcall orig-fn win)))
-  )
+        (funcall orig-fn win))))
 
 (define-minor-mode +zen-mode
   "Toggle Zen Mode."

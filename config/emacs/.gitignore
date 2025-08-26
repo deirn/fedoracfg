@@ -8,5 +8,8 @@
 !lisp/
 !lisp/**
 
+!lsp-bridge/
+!lsp-bridge/**
+
 !snippets/
 !snippets/**

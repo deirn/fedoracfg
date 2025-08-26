@@ -60,7 +60,7 @@ https://emacs.stackexchange.com/a/78310"
   (dape-buffer-window-arrangement 'left)
   :hook
   (kill-emacs . dape-breakpoint-save)
-  (after-init . dape-breakpoint-load)
+  (+late . dape-breakpoint-load)
   :config
   (dape-breakpoint-global-mode 1))
 

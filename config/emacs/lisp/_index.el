@@ -21,6 +21,7 @@
         undo
         evil
         completions
+        minibuffer
         lsp
         lang
         edit

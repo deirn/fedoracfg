@@ -32,7 +32,7 @@
   ;; manually enabled below
   (lsp-bridge-enable-mode-line nil)
 
-  ;; (lsp-bridge-enable-completion-in-minibuffer t)
+  (lsp-bridge-enable-completion-in-minibuffer t)
   (lsp-bridge-enable-completion-in-string t)
   (lsp-bridge-symbols-enable-which-func t)
 
@@ -189,7 +189,8 @@
   "c a" '("action"        . lsp-bridge-code-action)
   "c r" '("rename symbol" . lsp-bridge-rename)
   "c s" '("symbol list"   . consult-imenu)
-  "t l" '("lsp"           . lsp-bridge-mode))
+  "t l" '("lsp"           . lsp-bridge-mode)
+  "t L" '("restart lsp"   . lsp-bridge-restart-process))
 
 (map! normal
   "K" #'+show-documentation)
