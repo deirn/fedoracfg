@@ -25,6 +25,7 @@
         elisp
         markdown
         nix
+        python
         shell
         systemd
         text

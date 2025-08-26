@@ -8,26 +8,18 @@
   (after! lsp-bridge
     (add-to-list 'lsp-bridge-single-lang-server-mode-list (cons mode command))))
 
-(use-package nerd-icons-corfu
-  :config
-  (defun +nic-alias (alias from)
-    "Add ALIAS mapping FROM `nerd-icons-corfu-mapping'."
-    (add-to-list 'nerd-icons-corfu-mapping (cons alias (cdr (assoc from nerd-icons-corfu-mapping)))))
-
-  (+nic-alias 'feature 'keyword)
-  (+nic-alias (intern "special form") 'keyword)
-  (+nic-alias 'custom 'variable)
-  (+nic-alias 'search 'text)
-  (+nic-alias 'face 'color))
-
 (use-package lsp-bridge
   :after (yasnippet markdown-mode orderless nerd-icons-corfu)
-  :ensure (:host github :repo "manateelazycat/lsp-bridge"
-                 :files (:defaults "*.el" "*.py" "acm" "core" "langserver" "multiserver" "resources")
-                 :build (:not elpaca--byte-compile))
+  :ensure ( :host github :repo "manateelazycat/lsp-bridge"
+            :files (:defaults "*.el" "*.py" "acm" "core" "langserver" "multiserver" "resources")
+            :build (:not elpaca--byte-compile))
   :custom
   ;; use uv, so it has consistent package version
   (lsp-bridge-python-command "uv")
+
+  (lsp-bridge-user-langserver-dir (expand-file-name "lsp-bridge/langserver" user-emacs-directory))
+  (lsp-bridge-user-multiserver-dir (expand-file-name "lsp-bridge/multiserver" user-emacs-directory))
+
   (lsp-bridge-enable-hover-diagnostic t)
 
   ;; use flymake-bridge, see below
@@ -40,7 +32,7 @@
   ;; manually enabled below
   (lsp-bridge-enable-mode-line nil)
 
-  (lsp-bridge-enable-completion-in-minibuffer t)
+  ;; (lsp-bridge-enable-completion-in-minibuffer t)
   (lsp-bridge-enable-completion-in-string t)
   (lsp-bridge-symbols-enable-which-func t)
 
@@ -137,10 +129,12 @@
   ;;       (propertize (nerd-icons-mdicon "nf-md-rocket") 'face face))))
 
   (define-advice lsp-bridge--enable (:after () extra)
+    (corfu-mode -1)
     (setq-local completion-in-region-function (lambda (&rest _) (call-interactively #'lsp-bridge-popup-complete-menu)))
     (unless (member major-mode +--nobreadcrumb) (lsp-bridge-breadcrumb-mode 1)))
 
   (define-advice lsp-bridge--disable (:after () extra)
+    (corfu-mode 1)
     (lsp-bridge-breadcrumb-mode -1)
     (lsp-bridge-kill-process))
 

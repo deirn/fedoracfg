@@ -20,10 +20,10 @@
         discord
         undo
         evil
+        completions
         lsp
         lang
         edit
-        completions
         debug
         formatting))
 

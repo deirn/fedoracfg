@@ -85,6 +85,27 @@
 
 (use-package wgrep)
 
+(use-package corfu
+  :custom
+  (corfu-auto t)
+  :hook
+  (+late . global-corfu-mode))
+
+(use-package nerd-icons-corfu
+  :config
+  (defun +nic-alias (alias from)
+    "Add ALIAS mapping FROM `nerd-icons-corfu-mapping'."
+    (add-to-list 'nerd-icons-corfu-mapping (cons alias (cdr (assoc from nerd-icons-corfu-mapping)))))
+
+  (+nic-alias 'feature 'keyword)
+  (+nic-alias (intern "special form") 'keyword)
+  (+nic-alias 'custom 'variable)
+  (+nic-alias 'search 'text)
+  (+nic-alias 'face 'color)
+
+  (after! corfu
+    (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter)))
+
 (map! spc
   "s b" '("buffer"       . consult-buffer)
   "s e" '("error"        . consult-flymake)
