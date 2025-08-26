@@ -22,7 +22,7 @@
         evil
         lsp
         lang
-        edit-shortcuts
+        edit
         completions
         debug
         formatting))

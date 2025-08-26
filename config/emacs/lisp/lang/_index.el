@@ -27,6 +27,7 @@
         nix
         shell
         systemd
-        text))
+        text
+        web))
 
 ;;; language.el ends here.

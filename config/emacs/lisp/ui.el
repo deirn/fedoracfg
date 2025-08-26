@@ -33,8 +33,13 @@
   :custom
   (doom-modeline-buffer-file-name-style 'relative-from-project)
   (doom-modeline-buffer-encoding 'nondefault)
+  (doom-modeline-minor-modes t)
   :hook
   (+late . doom-modeline-mode))
+
+(use-package minions
+  :hook
+  (+late . minions-mode))
 
 (use-package hide-mode-line
   :commands (hide-mode-line-mode

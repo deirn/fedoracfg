@@ -130,11 +130,11 @@
     (apply orig-fn args)
     (advice-remove 'find-file #'find-file@set-jump-inner))
 
-  (define-advice lsp-bridge--mode-line-format (:filter-return (ret) rocket)
-    "Replace `lsp-bridge' mode line string with a rocket icon."
-    (when ret
-      (let ((face (doom-modeline-face (get-text-property 0 'face ret))))
-        (propertize (nerd-icons-mdicon "nf-md-rocket") 'face face))))
+  ;; (define-advice lsp-bridge--mode-line-format (:filter-return (ret) rocket)
+  ;;   "Replace `lsp-bridge' mode line string with a rocket icon."
+  ;;   (when ret
+  ;;     (let ((face (doom-modeline-face (get-text-property 0 'face ret))))
+  ;;       (propertize (nerd-icons-mdicon "nf-md-rocket") 'face face))))
 
   (define-advice lsp-bridge--enable (:after () extra)
     (setq-local completion-in-region-function (lambda (&rest _) (call-interactively #'lsp-bridge-popup-complete-menu)))

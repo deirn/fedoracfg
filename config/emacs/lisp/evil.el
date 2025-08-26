@@ -48,6 +48,9 @@
   :init
   (evilnc-default-hotkeys))
 
+(use-package evil-anzu
+  :after (evil anzu))
+
 (map! visual
   "A" #'evil-mc-make-cursor-in-visual-selection-end
   "I" #'evil-mc-make-cursor-in-visual-selection-beg)

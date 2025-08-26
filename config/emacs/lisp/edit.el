@@ -47,11 +47,22 @@
   (advice-add #'embark-completing-read-prompter
               :around #'embark-hide-which-key-indicator))
 
+(use-package anzu
+  :hook
+  (+late . global-anzu-mode))
+
 (map! spc
   "a"   '("act" . embark-act)
   "b c" 'combobulate)
 
 (map! nil
-  "M-e" #'embark-act)
+  "M-e" #'embark-act
+  [remap query-replace] #'anzu-query-replace
+  [remap query-replace-regexp] #'anzu-query-replace-regexp)
+
+(map! nil
+  :keymaps 'isearch-mode-map
+  [remap isearch-query-replace] #'anzu-isearch-query-replace
+  [remap isearch-query-replace-regexp] #'anzu-isearch-query-replace-regexp)
 
 ;;; edit-shortcuts.el ends here.
