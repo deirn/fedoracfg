@@ -34,7 +34,17 @@
       (call-interactively #'apheleia-format-buffer)
       (message "Formatted using apheleia"))))
 
+(defun +set-tab-width (num)
+  "Set `tab-width' to NUM."
+  (interactive
+   (list (if current-prefix-arg
+             (prefix-numeric-value current-prefix-arg)
+           (read-number "Tab width: " tab-width))))
+  (setq tab-width num)
+  (message "Set tab width to %d" num))
+
 (map! spc
-  "c f" '("format" . +format-buffer))
+  "c f" '("format" . +format-buffer)
+  "c t" '("tab width" . +set-tab-width))
 
 ;;; formatting.el ends here.
