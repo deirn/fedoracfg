@@ -8,6 +8,13 @@
   (after! lsp-bridge
     (add-to-list 'lsp-bridge-single-lang-server-mode-list (cons mode command))))
 
+(use-package mason
+  :ensure (:host github :repo "deirn/mason.el")
+  :custom
+  (mason-target "linux_x64_gnu")
+  :hook
+  (+late . mason-ensure))
+
 (use-package lsp-bridge
   :after (yasnippet markdown-mode orderless nerd-icons-corfu)
   :ensure ( :host github :repo "manateelazycat/lsp-bridge"

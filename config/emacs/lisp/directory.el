@@ -72,4 +72,9 @@
   "l"   #'+dirvish-open-file
   "RET" #'+dirvish-open-file)
 
+(map! nil
+  :keymaps 'dired-mode-map
+  [remap dired-do-symlink] #'dirvish-symlink
+  [remap dired-do-copy] #'dirvish-yank)
+
 ;;; directory.el ends here.

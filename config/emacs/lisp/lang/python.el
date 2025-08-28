@@ -2,6 +2,6 @@
 ;;; Commentary:
 ;;; Code:
 
-(use-package jupyter)
+;; (use-package jupyter)
 
 ;;; python.el ends here.

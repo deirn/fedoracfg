@@ -37,3 +37,4 @@ If NO-ERROR is not nil, report no error."
 (load! lisp)
 
 ;;; init.el ends here.
+(put 'list-threads 'disabled nil)

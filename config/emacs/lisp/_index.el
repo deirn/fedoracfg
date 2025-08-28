@@ -26,6 +26,8 @@
         lang
         edit
         debug
-        formatting))
+        formatting
+        ;; everywhere
+        ))
 
 ;;; _index.el ends here.
