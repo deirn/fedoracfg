@@ -74,6 +74,13 @@
     :config
     (define-advice vertico-posframe--get-border-color (:override () all-same-color)
       +posframe-border-color)
+
+    (defun +vertico-posframe-get-size (buf)
+      (let ((h (1+ vertico-count))
+            (w (round (* (frame-width) 0.62))))
+      (list :min-height h :min-width w
+            :max-height h :max-width w)))
+    (setq vertico-posframe-size-function #'+vertico-posframe-get-size)
     :hook
     (+late . vertico-multiform-mode))
 
@@ -91,6 +98,7 @@
     (add-to-list 'mini-frame-ignore-functions 'completing-read)
     (add-to-list 'mini-frame-ignore-commands 'elpaca-ui-search)
     (add-to-list 'mini-frame-ignore-commands 'evil-ex)
+    (add-to-list 'mini-frame-ignore-commands 'shell-command)
     (set-face-background 'child-frame-border +posframe-border-color)
     :hook
     (+late . mini-frame-mode)))

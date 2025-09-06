@@ -2,6 +2,10 @@
 ;;; Commentary:
 ;;; Code:
 
+(load! ../thirdparty/fuco1-indent)
+
+(setq lisp-indent-function #'+fuco1-lisp-indent-function)
+
 (use-package helpful
   :commands (helpful-at-point)
   :config
@@ -17,5 +21,7 @@
   (emacs-lisp-mode . elisp-def-mode))
 
 (use-package pcre2el)
+
+;; (load! ../thirdparty/ouroboroslisp-indent)
 
 ;;; elisp.el ends here.

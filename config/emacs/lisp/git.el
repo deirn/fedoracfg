@@ -3,6 +3,8 @@
 ;;;   Git
 ;;; Code:
 
+(setq vc-follow-symlinks t)
+
 (use-package ediff
   :ensure nil
   :custom

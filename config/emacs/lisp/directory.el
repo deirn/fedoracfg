@@ -14,6 +14,7 @@
   (dirvish-header-line-height 24)
   (dirvish-mode-line-height 24)
   (dirvish-collapse-separator "/")
+  (dirvish-subtree-skip-intermediate-folders t)
   :config
   (dirvish-side-follow-mode 1)
   (put 'dired-find-alternate-file 'disabled nil)

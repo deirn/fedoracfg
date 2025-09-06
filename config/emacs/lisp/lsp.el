@@ -10,13 +10,11 @@
 
 (use-package mason
   :ensure (:host github :repo "deirn/mason.el")
-  :custom
-  (mason-target "linux_x64_gnu")
   :hook
   (+late . mason-ensure))
 
 (use-package lsp-bridge
-  :after (yasnippet markdown-mode orderless nerd-icons-corfu)
+  :after (yasnippet markdown-mode orderless nerd-icons-corfu el-patch)
   :ensure ( :host github :repo "manateelazycat/lsp-bridge"
             :files (:defaults "*.el" "*.py" "acm" "core" "langserver" "multiserver" "resources")
             :build (:not elpaca--byte-compile))
@@ -56,12 +54,14 @@
   (acm-enable-icon t)
   (acm-enable-tabnine nil)
   (acm-candidate-match-function #'orderless-flex)
+
+  (acm-enable-quick-access t)
   :config
   ;; Sort snippets first, then other candidates
   ;; (delete "template-first-part-candidates" acm-completion-backend-merge-order)
   ;; (setq acm-completion-backend-merge-order (cons "template-first-part-candidates" acm-completion-backend-merge-order))
 
-  ;; Use nerd icons
+  ;; use nerd icons
   (defvar +acm-nerd-icon-mapper
     '(("material" :fn nerd-icons-mdicon :prefix "nf-md-")
       ("octicons" :fn nerd-icons-octicon :prefix "nf-oct-")
@@ -104,6 +104,13 @@
   (dolist (map acm-icon-alist)
     (when (assoc (nth 1 map) +acm-nerd-icon-mapper)
       (setf (nth 2 map) (replace-regexp-in-string "-" "_" (nth 2 map)))))
+
+  ;; Show quick access key without dot
+  (el-patch-define-template
+   (defun acm-menu-render-items)
+   (el-patch-swap (concat quick-access-key ". ")
+                  (concat (propertize quick-access-key 'face annotation-face) nerd-icons-corfu--space)))
+  (late! (el-patch-eval-template 'acm-menu-render-items 'defun))
 
   (evil-set-initial-state 'lsp-bridge-ref-mode 'insert)
   (+pop "*lsp-bridge-doc*")
@@ -201,5 +208,10 @@
 
 (map! normal
   "K" #'+show-documentation)
+
+(map! nil
+  :keymaps 'acm-mode-map
+  "M-n" #'acm-select-next-page
+  "M-p" #'acm-select-prev-page)
 
 ;;; lsp.el ends here.

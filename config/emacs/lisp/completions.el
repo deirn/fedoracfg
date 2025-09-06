@@ -35,6 +35,10 @@
 
 (use-package yasnippet-snippets :after yasnippet :defer t)
 
+(use-package cape
+  :init
+  (add-hook 'completion-at-point-functions #'cape-dabbrev))
+
 (use-package corfu
   :custom
   (corfu-auto t)
@@ -56,5 +60,8 @@
 
   (after! corfu
     (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter)))
+
+(map! nil
+  "C-c p" #'cape-prefix-map)
 
 ;;; completions.el ends here.
