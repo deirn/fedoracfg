@@ -12,7 +12,10 @@
   (ediff-split-window-function #'split-window-horizontally))
 
 (use-package magit
-  :commands (magit-status))
+  :commands (magit-status)
+  :hook
+  (magit-mode . +killable-mode)
+  (magit-process-mode . +killable-mode))
 
 (use-package diff-hl
   :config

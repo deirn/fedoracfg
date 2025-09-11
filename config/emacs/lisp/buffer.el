@@ -7,19 +7,21 @@
   :hook
   (ibuffer-mode . nerd-icons-ibuffer-mode))
 
+(define-minor-mode +killable-mode
+  "Add this buffer to `+kill-other-buffers' list."
+  :global nil
+  :init-value nil)
+
+(add-hook 'ibuffer-mode-hook #'+killable-mode)
+
 (defun +kill-other-buffers ()
   "Kill all other buffers except the current one and essential buffers."
   (interactive)
   (let ((target-name '("*dashboard*"
                        "*Help*"
-                       "*Ibuffer*"
                        "*lsp-bridge-doc*"
                        "*compilation*"))
-        (target-mode '("Helpful"
-                       "Custom"
-                       "Magit"
-                       "Magit Process"
-                       "Flymake diagnostics"
+        (target-mode '("Custom"
                        "Grep"
                        "Backtrace"))
         (killed-count 0))
@@ -29,6 +31,7 @@
               (mode (buffer-local-value 'mode-name buf)))
           (when (or (and (not (string-prefix-p "*" name)) ; keep `*' and ` ' by default
                          (not (string-prefix-p " " name)))
+                    +killable-mode
                     (member name target-name)             ; delete explicit ones
                     (member mode target-mode))
             (kill-buffer buf)

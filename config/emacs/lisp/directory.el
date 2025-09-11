@@ -10,7 +10,10 @@
   (dirvish-subtree-state-style 'nerd)
   (dirvish-attributes '(nerd-icons vc-state file-size file-time))
   (dirvish-side-attributes '(nerd-icons collapse vc-state file-size))
-  (dirvish-hide-details '(dirvish-side))
+  (dirvish-side-root-window-fn)
+  (dirvish-side-display-alist '((side . left)))
+  (dirvish-side-window-parameters '((+dirvish-side . t)
+                                    (no-delete-other-windows . t)))
   (dirvish-header-line-height 24)
   (dirvish-mode-line-height 24)
   (dirvish-collapse-separator "/")
@@ -18,10 +21,17 @@
   :config
   (dirvish-side-follow-mode 1)
   (put 'dired-find-alternate-file 'disabled nil)
-  (add-to-list 'dirvish-side-window-parameters '(+dirvish-side . t))
+
+  (defun +dirvish-side-revert ()
+    "Revert dirvish side window."
+    (interactive)
+    (when-let* ((window (dirvish-side--session-visible-p)))
+      (with-current-buffer (window-buffer window)
+        (revert-buffer))))
   :hook
   (+late . dirvish-override-dired-mode)
-  (dired-mode . dired-omit-mode))
+  (dired-mode . dired-omit-mode)
+  (after-save . +dirvish-side-revert))
 
 (use-package diredfl
   :after dirvish

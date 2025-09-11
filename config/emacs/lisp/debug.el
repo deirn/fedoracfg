@@ -32,7 +32,8 @@ https://emacs.stackexchange.com/a/78310"
 
   (+pop '(major-mode flymake-diagnostics-buffer-mode) 'bottom)
   :hook
-  (prog-mode . flymake-mode))
+  (prog-mode . flymake-mode)
+  (flymake-diagnostics-buffer-mode . +killable-mode))
 
 (use-package flymake-popon
   :ensure (:repo "https://codeberg.org/akib/emacs-flymake-popon.git")

@@ -9,7 +9,9 @@
 (use-package helpful
   :commands (helpful-at-point)
   :config
-  (+pop '(major-mode . helpful-mode)))
+  (+pop '(major-mode . helpful-mode))
+  :hook
+  (helpful-mode . +killable-mode))
 
 (use-package elisp-demos
   :init

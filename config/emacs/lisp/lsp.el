@@ -15,9 +15,9 @@
 
 (use-package lsp-bridge
   :after (yasnippet markdown-mode orderless nerd-icons-corfu el-patch)
-  :ensure ( :host github :repo "manateelazycat/lsp-bridge"
-            :files (:defaults "*.el" "*.py" "acm" "core" "langserver" "multiserver" "resources")
-            :build (:not elpaca--byte-compile))
+  :ensure (:host github :repo "manateelazycat/lsp-bridge"
+           :files (:defaults "*.el" "*.py" "acm" "core" "langserver" "multiserver" "resources")
+           :build (:not elpaca--byte-compile))
   :custom
   ;; use uv, so it has consistent package version
   (lsp-bridge-python-command "uv")
