@@ -31,7 +31,7 @@
               (mode (buffer-local-value 'mode-name buf)))
           (when (or (and (not (string-prefix-p "*" name)) ; keep `*' and ` ' by default
                          (not (string-prefix-p " " name)))
-                    +killable-mode
+                    (with-current-buffer buf +killable-mode)
                     (member name target-name)             ; delete explicit ones
                     (member mode target-mode))
             (kill-buffer buf)
