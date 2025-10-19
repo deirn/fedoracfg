@@ -51,4 +51,14 @@ c.command_palette_font_size = 10
 -- disable ligatures
 c.harfbuzz_features = { 'calt = 0', 'clig = 0', 'liga = 0' }
 
+-- disable bell audio
+c.audible_bell = "Disabled"
+c.visual_bell = {
+  fade_in_function = 'EaseIn',
+  fade_in_duration_ms = 150,
+  fade_out_function = 'EaseOut',
+  fade_out_duration_ms = 150,
+}
+c.colors.visual_bell = tab_bg
+
 return c

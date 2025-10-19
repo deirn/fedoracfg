@@ -1,6 +1,9 @@
 [submodule "share/idea-doom-emacs"]
 	path = share/idea-doom-emacs
 	url = https://github.com/sei40kr/idea-doom-emacs.git
-[submodule "share/gaudible"]
-	path = share/gaudible
-	url = https://gitlab.com/dbazile/gaudible.git
+[submodule "share/tbsm"]
+	path = share/tbsm
+	url = https://github.com/loh-tar/tbsm.git
+[submodule "share/tulizu"]
+	path = share/tulizu
+	url = https://github.com/loh-tar/tulizu.git

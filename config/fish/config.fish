@@ -1,5 +1,9 @@
 # @fish-lsp-disable 2002
 
+if test "$DISPLAY" = "" -a "$XDG_VTNR" = 1
+    tbsm
+end
+
 set -gx FEDORACFG $HOME/Documents/github.com/deirn/fedoracfg
 
 # [ direnv ]
@@ -89,6 +93,7 @@ abbr -a enw emacs -nw
 abbr -a rm trash
 abbr -a rm! /usr/bin/rm
 abbr -a c clear
+abbr -a dnf sudo dnf
 
 alias zen-browser="flatpak run app.zen_browser.zen"
 # [ abbreviations ]

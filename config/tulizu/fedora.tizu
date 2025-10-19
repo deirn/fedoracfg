@@ -1,0 +1,25 @@
+:tu# Author=Your ID
+:tu# Desc=A nice Text
+:tu# <Don't hesitate to add more info or credits as comment>
+:tu#
+:tu# Tip: You may want to re-order/re-number the color tags by some S&R. To avoid trouble
+:tu#      you may first rename all :tuC to :tuX and then one by one :tuX<n> to :tuC<m>
+:tu#
+:tuC2:      :tuC1:..........:tuC2: :tuC4:    :tuC2:
+   :tuC1:.;;cccccccccc;.:tuC2:
+  :tuC1:.;ccccccccccccccc;.:tuC2:  Welcome to \n
+:tuC1: .;ccccccc:tuC4:.;@@@@;.:tuC1:cc;    __         _
+ :tuC1:;cccccccc:tuC4:@@.:tuC1:cc:tuC4:.@@:tuC1:ccc;  / _|       | |
+:tuC1:;ccccccccc:tuC4:@@`:tuC1:cc:tuC4:`**:tuC1:cccc | |_ ___  __| | ___  _ __ __ _
+:tuC1:cccc:tuC4:.;@@@@@@@@;:tuC1:ccccccc |  _/ _ \/ _` |/ _ \| '__/ _` |
+:tuC1:cccc:tuC4:@@':tuC1:@@:tuC4:'@@:tuC1:ccccccccc; | ||  __/ (_| | (_) | | | (_| |
+:tuC1:cccc:tuC4:@@.:tuC1:@@:tuC4:.@@:tuC1:cccccccc;  |_| \___|\__,_|\___/|_|  \__,_|
+:tuC1:cccc:tuC4:';@@@@;':tuC1:ccccccc;':tuC2:  \S
+:tuC1:cccccccccccccccccc;':tuC2:   Linux \r
+:tuC1:;ccccccccccccccc;;':tuC2:
+ :tuC1:''''''''''''''':tuC2:
+:tuDY:
+:tu# c1=Origial colors as auto detected
+:tu# Colors1=$Bold$Blue $White $Normal $Bold$White
+:tu#          tuC1      tuC2   tuC3    tuC4
+:tu#

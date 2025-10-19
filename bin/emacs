@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+FLAGS="-nsl"
+
+if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+    exec emacs-pgtk $FLAGS $@
+elif [[ -n "${DISPLAY:-}" ]]; then
+    exec emacs-gtk+x11 $FLAGS $@
+else
+    exec emacs-pgtk -nw $FLAGS $@
+fi
