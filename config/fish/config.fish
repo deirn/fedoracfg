@@ -1,9 +1,5 @@
 # @fish-lsp-disable 2002
 
-if test "$DISPLAY" = "" -a "$XDG_VTNR" = 1
-    tbsm
-end
-
 set -gx FEDORACFG $HOME/Documents/github.com/deirn/fedoracfg
 
 # [ direnv ]
@@ -39,6 +35,7 @@ set -g tide_character_vi_icon_replace R
 # [ tide ]
 
 # [ path variables ]
+fish_add_path $FEDORACFG/bin
 fish_add_path $HOME/.local/bin
 fish_add_path $HOME/.config/emacs/bin
 fish_add_path $HOME/.local/share/JetBrains/Toolbox/bin
@@ -46,7 +43,8 @@ fish_add_path $HOME/.local/share/JetBrains/Toolbox/scripts
 fish_add_path $HOME/Android/Sdk/platform-tools
 fish_add_path $HOME/.pub-cache/bin
 fish_add_path $HOME/.local/share/qlot/bin
-fish_add_path $FEDORACFG/bin
+fish_add_path $HOME/.config/composer/vendor/bin/
+fish_add_path $HOME/.opencode/bin
 # [ path variables ]
 
 # [ vi emulation ]

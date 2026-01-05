@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+
+# javam - select a Java from mise flat installs and run a command with JAVA_HOME set
+# Usage:
+#   javam 17 ./gradlew build
+#   javam microsoft-17 ./gradlew build
+# Defaults to temurin if vendor not provided.
+
+set -euo pipefail
+
+DEFAULT_VENDOR="temurin"
+MISE_ROOT="${MISE_ROOT:-$HOME/.local/share/mise/installs/java}"
+
+if [ $# -lt 2 ]; then
+  echo "Usage: $0 <version|vendor-version> <command> [args...]"
+  exit 2
+fi
+
+SPEC="$1"; shift
+CMD=( "$@" )
+
+# Parse vendor-version (flat directories like vendor-version)
+if [[ "$SPEC" == *"-"* ]]; then
+  VENDOR="${SPEC%%-*}"
+  VERSION="${SPEC#*-}"
+else
+  VENDOR="$DEFAULT_VENDOR"
+  VERSION="$SPEC"
+fi
+
+if [ ! -d "$MISE_ROOT" ]; then
+  echo "Mise root not found: $MISE_ROOT"
+  exit 3
+fi
+
+# Match directories named vendor-version* or vendor-*version* or temurin-17* when vendor defaulted
+# Prefer exact vendor-version match, then vendor-*VERSION*, then any vendor-*VERSION* if vendor unspecified
+matches=()
+
+# 1) exact vendor-version prefix
+while IFS= read -r -d '' d; do matches+=("$d"); done < <(find "$MISE_ROOT" -maxdepth 1 -type d -name "${VENDOR}-${VERSION}*" -print0 2>/dev/null)
+
+# 2) if none, try vendor-*<version>* (already covered), else try any vendor that ends with -version*
+if [ ${#matches[@]} -eq 0 ]; then
+  while IFS= read -r -d '' d; do matches+=("$d"); done < <(find "$MISE_ROOT" -maxdepth 1 -type d -name "*-${VERSION}*" -print0 2>/dev/null)
+fi
+
+if [ ${#matches[@]} -eq 0 ]; then
+  echo "No JDK matching '${SPEC}' (vendor='$VENDOR', version='$VERSION') in $MISE_ROOT"
+  exit 4
+fi
+
+# Sort matches to prefer highest / most specific (version sort on basename) and pick first
+IFS=$'\n' sorted=($(for p in "${matches[@]}"; do basename "$p"; done | sort -V -r))
+BEST_BASE="${sorted[0]}"
+JDK_DIR="$MISE_ROOT/$BEST_BASE"
+
+# Confirm bin/java exists; if not, try to locate java inside the directory
+if [ ! -x "$JDK_DIR/bin/java" ]; then
+  java_path=$(find "$JDK_DIR" -maxdepth 3 -type f -name "java" -perm /u=x,g=x,o=x 2>/dev/null | head -n1 || true)
+  if [ -n "$java_path" ]; then
+    JDK_DIR=$(dirname "$(dirname "$java_path")")
+  else
+    echo "Selected JDK dir does not contain an executable java: $JDK_DIR"
+    exit 5
+  fi
+fi
+
+export JAVA_HOME="$JDK_DIR"
+export PATH="$JAVA_HOME/bin:$PATH"
+
+printf "Using JAVA_HOME=%s\n" "$JAVA_HOME" >&2
+
+exec "${CMD[@]}"
