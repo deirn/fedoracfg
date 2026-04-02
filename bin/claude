@@ -1,0 +1,4 @@
+#!/usr/bin/env -S bash -i
+
+clear
+"$HOME/.local/share/claude/claude" $@

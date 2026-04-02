@@ -2,4 +2,4 @@
 
 # Exclude anything Nvidia from RPMFusion as Negativo17 repo is better
 [rpmfusion-nonfree*]
-excludepkgs=*nvidia*
+# excludepkgs=*nvidia*

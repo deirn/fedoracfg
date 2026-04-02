@@ -40,7 +40,6 @@ fish_add_path $HOME/.local/bin
 fish_add_path $HOME/.config/emacs/bin
 fish_add_path $HOME/.local/share/JetBrains/Toolbox/bin
 fish_add_path $HOME/.local/share/JetBrains/Toolbox/scripts
-fish_add_path $HOME/Android/Sdk/platform-tools
 fish_add_path $HOME/.pub-cache/bin
 fish_add_path $HOME/.local/share/qlot/bin
 fish_add_path $HOME/.config/composer/vendor/bin/
@@ -82,6 +81,12 @@ fish_add_path $NPM_PACKAGES/bin
 set -gx PNPM_HOME $HOME/.local/share/pnpm
 fish_add_path $PNPM_HOME
 # [ pnpm ]
+
+# [ android ]
+set -gx ANDROID_HOME "$HOME/Android/Sdk"
+fish_add_path $ANDROID_HOME/emulator
+fish_add_path $ANDROID_HOME/platform-tools
+# [ android ]
 
 # [ abbreviations ]
 abbr -a ls lsd
